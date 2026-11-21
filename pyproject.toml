@@ -1,0 +1,9 @@
+# Tooling configuration for the examples repository. It is not a Python package: tutorials and components are
+# consumed through interpretune (`it.hub.pull`, the notebooks), and nothing here is installed.
+
+[tool.pytest.ini_options]
+# `dashboards` holds the Neuronpedia pretokenization module that SAEDashboard imports by name
+# (`--custom-dataset-module dashboard_pretokenization_rte`), so the tests import it the same way.
+pythonpath = [".", "dashboards"]
+testpaths = ["tests"]
+addopts = "--strict-markers --color=yes"

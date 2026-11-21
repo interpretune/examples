@@ -1,0 +1,12 @@
+EXTENDS: base_jspace_battery.yaml
+
+EXPERIMENT_NAME: gemma3_1b_it_probe_swap
+
+MODEL:
+  family: gemma3
+  variant: 1b_it
+
+EXPERIMENT:
+  model_name: google/gemma-3-1b-it
+  jlens_model_id: gemma-3-1b-it
+  bands: [[6, 12], [9, 15], [12, 18]]

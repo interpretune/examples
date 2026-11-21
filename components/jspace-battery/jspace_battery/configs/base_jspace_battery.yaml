@@ -1,0 +1,10 @@
+EXTENDS: interpretune.harness:configs/base.yaml
+
+# J-space battery defaults (interpretune#425). Prompts: the paper's own two-hop set (data/probe-swap.json).
+EXPERIMENT:
+  items_file: probe-swap.json
+  render_mode: raw
+  top_k: 5
+  n_new_tokens: 4
+  limit: 0
+  device: cuda

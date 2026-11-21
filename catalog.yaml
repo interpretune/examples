@@ -9,4 +9,18 @@
 #   owner:         who fixes it when it breaks
 #   smoke:         a CPU configuration the scheduled run executes
 #   first_party:   true when its source lives under components/
-components: []
+components:
+  - repo: speediedan/rte
+    revision: b1a920fc1400837a62bc7a2b155e39e5da206b86
+    kinds: [module, datamodule]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: rte_demo.gpt2.core
+    first_party: true
+  - repo: speediedan/prompt-configs
+    revision: 3d8b9710061283dd14c86a46f0c0649b5e262db0
+    kinds: [promptconfigs]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: null  # definitions only: composed by other components' configurations (compose_ref), not run alone
+    first_party: true

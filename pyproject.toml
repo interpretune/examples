@@ -7,3 +7,34 @@
 pythonpath = [".", "dashboards"]
 testpaths = ["tests"]
 addopts = "--strict-markers --color=yes"
+
+[tool.nbpress]
+# The tutorials, read by nbpress (https://github.com/speediedan/nbpress, the commit interpretune pins): nbpress-publish
+# publishes the dev lane, nbpress-render executes the published notebooks into docs artifacts, and
+# nbpress-render --check-stale gates them.
+dev_dir = "tutorials/dev"
+publish_dir = "tutorials/publish"
+colab_repo = "interpretune/examples"
+colab_branch = "main"
+install_cell = [
+    "# Uncomment to run installation steps if you do not have a development",
+    "# editable install and want to run this notebook in a fresh environment.",
+    "# %pip install uv",
+    '# %uv pip install --upgrade pip setuptools wheel && \',
+    "# %uv pip install 'git+https://github.com/speediedan/interpretune.git@main[examples]'",
+    "# %uv pip install --group git-deps",
+    "#",
+    "# NOTE: This cell is intentionally commented out. We will uncomment these",
+    "# install commands once we no longer need to preserve editable installs",
+    "# for active developer venvs.",
+]
+docs_artifact_dir = "docs/notebook_artifacts"
+# the op-surface stamp and its output-drift checks, run by the renderer as repository hooks
+docs_hooks = "scripts/notebook_docs_hooks.py"
+docs_render_command = "nbpress-render"
+
+[tool.nbpress.import_rewrites]
+# The tutorials still import their sidecar modules through the interpretune distribution's it_examples package; these
+# rewrites go when the tutorials repoint (interpretune#1016).
+"it_examples.notebooks.dev." = "it_examples.notebooks.publish."
+'"notebooks" / "dev"' = '"notebooks" / "publish"'

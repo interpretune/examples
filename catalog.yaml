@@ -1,0 +1,12 @@
+# The catalog: the pinned, tested list of components the gallery links to. Open discovery stays the Hub's
+# `interpretune` tag; an entry here is a promise that the component works with the interpretune range it names.
+#
+# Each entry:
+#   repo:          the Hub repository (owner/name)
+#   revision:      a full commit sha, never a branch
+#   kinds:         the component kinds it provides
+#   interpretune:  the tested interpretune version range
+#   owner:         who fixes it when it breaks
+#   smoke:         a CPU configuration the scheduled run executes
+#   first_party:   true when its source lives under components/
+components: []

@@ -35,10 +35,16 @@ jobs:
         run: uv run --no-project --with pyyaml python scripts/check_catalog.py catalog.yaml
       - name: Published notebooks and rendered artifacts are current
         run: |
+          if ! grep -q '^\[tool\.nbpress\]' pyproject.toml 2>/dev/null; then
+            echo "pyproject.toml has no [tool.nbpress] table yet; no notebooks to check"
+            exit 0
+          fi
           nbpress-publish --check-only
           nbpress-render --check-stale
       - name: Every tier's tests
-        run: python -m pytest tests -v
+        run: |
+          if [ ! -d tests ]; then echo "no tests/ yet; nothing to run"; exit 0; fi
+          python -m pytest tests -v
       - name: Record the failure in an issue
         if: failure()
         env:

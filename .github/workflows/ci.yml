@@ -89,6 +89,10 @@ jobs:
       - name: Published notebooks and rendered artifacts are current
         if: env.TIER_SELECTED == 'true' && matrix.tier == 'tutorials'
         run: |
+          if ! grep -q '^\[tool\.nbpress\]' pyproject.toml 2>/dev/null; then
+            echo "pyproject.toml has no [tool.nbpress] table yet; no notebooks to check"
+            exit 0
+          fi
           nbpress-publish --check-only
           nbpress-render --check-stale
       - name: Run the tier's tests

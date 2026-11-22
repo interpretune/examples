@@ -76,7 +76,10 @@ jobs:
     env:
       TIER_SELECTED: ${{ needs.changes.outputs[matrix.tier] }}
       CUDA_VISIBLE_DEVICES: ""
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      # one Hub token, interpretune's CI secret, under every name the tests read
+      HF_TOKEN: ${{ secrets.HF_MCP_TOKEN_RW }}
+      HF_GATED_PUBLIC_REPO_AUTH_KEY: ${{ secrets.HF_MCP_TOKEN_RW }}
+      IT_HF_TOKEN: ${{ secrets.HF_MCP_TOKEN_RW }}
       IT_COMPONENTS_HUB_CACHE: ${{ github.workspace }}/../components-hub-cache
     steps:
       - name: Skip an unselected tier

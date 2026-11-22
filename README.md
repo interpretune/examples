@@ -39,4 +39,4 @@ The design is recorded on
 - **Scheduled** (`.github/workflows/scheduled.yml`, daily): every tier against both the pinned interpretune and interpretune `main`. A failure opens an issue labeled `scheduled-failure`.
 - **The pin moves by pull request** (`.github/workflows/bump-interpretune.yml`, weekly): it opens a pull request when interpretune `main` has moved.
 
-Secrets: `HF_TOKEN` (read access to the Hub repositories the tests pull) and `EXAMPLES_BOT_TOKEN` (for the bump pull request, so its CI runs).
+Secrets: `HF_MCP_TOKEN_RW` (the Hub token interpretune's CI uses; the workflows pass it to the tests as `HF_TOKEN`, `HF_GATED_PUBLIC_REPO_AUTH_KEY` and `IT_HF_TOKEN`) and `EXAMPLE_BOT_TOKEN` (for the bump pull request, so its CI runs).

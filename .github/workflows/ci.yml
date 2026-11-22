@@ -1,0 +1,108 @@
+# Per-tier CI for pull requests and pushes to main. Each tier runs only when its paths change; a change to shared
+# configuration (this workflow, the setup action, pyproject.toml, interpretune.ref, the shared test support) runs
+# every tier. The full run, against both the pinned interpretune and its main, is scheduled.yml.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Select tiers
+    runs-on: ubuntu-latest
+    outputs:
+      tutorials: ${{ steps.select.outputs.tutorials }}
+      components: ${{ steps.select.outputs.components }}
+      dashboards: ${{ steps.select.outputs.dashboards }}
+      catalog: ${{ steps.select.outputs.catalog }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify the changed paths
+        id: select
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ "${EVENT}" = "workflow_dispatch" ] || [ -z "${BASE}" ] || [ "${BASE}" = "0000000000000000000000000000000000000000" ]; then
+            files="ALL"
+          else
+            files="$(git diff --name-only "${BASE}...${HEAD}")"
+          fi
+          echo "${files}"
+          shared='^(\.github/|pyproject\.toml$|interpretune\.ref$|tests/conftest\.py$|tests/support/)'
+          pick() { [ "${files}" = "ALL" ] || printf '%s\n' "${files}" | grep -qE "${shared}|$1"; }
+          # tutorials consume the first-party components, so a component change runs the tutorials too
+          pick '^(tutorials/|docs/notebook_artifacts/|scripts/notebook_docs_hooks\.py$|tests/tutorials/|components/)' && t=true || t=false
+          pick '^(components/|tests/components/)' && c=true || c=false
+          pick '^(dashboards/|tests/dashboards/)' && d=true || d=false
+          pick '^(catalog\.yaml$|scripts/check_catalog\.py$|components/)' && k=true || k=false
+          printf 'tutorials=%s\ncomponents=%s\ndashboards=%s\ncatalog=%s\n' "$t" "$c" "$d" "$k" | tee -a "${GITHUB_OUTPUT}"
+
+  catalog:
+    name: Catalog
+    needs: changes
+    if: needs.changes.outputs.catalog == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+      - name: Validate catalog.yaml
+        run: uv run --no-project --with pyyaml python scripts/check_catalog.py catalog.yaml
+
+  tests:
+    name: ${{ matrix.tier }} (CPU)
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        tier: [tutorials, components, dashboards]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TIER_SELECTED: ${{ needs.changes.outputs[matrix.tier] }}
+      CUDA_VISIBLE_DEVICES: ""
+      # one Hub token, interpretune's CI secret, under every name the tests read
+      HF_TOKEN: ${{ secrets.HF_MCP_TOKEN_RW }}
+      HF_GATED_PUBLIC_REPO_AUTH_KEY: ${{ secrets.HF_MCP_TOKEN_RW }}
+      IT_HF_TOKEN: ${{ secrets.HF_MCP_TOKEN_RW }}
+      IT_COMPONENTS_HUB_CACHE: ${{ github.workspace }}/../components-hub-cache
+    steps:
+      - name: Skip an unselected tier
+        if: env.TIER_SELECTED != 'true'
+        run: echo "no ${{ matrix.tier }} paths changed"
+      - uses: actions/checkout@v4
+        if: env.TIER_SELECTED == 'true'
+      - uses: ./.github/actions/setup-interpretune
+        if: env.TIER_SELECTED == 'true'
+      - name: Published notebooks and rendered artifacts are current
+        if: env.TIER_SELECTED == 'true' && matrix.tier == 'tutorials'
+        run: |
+          if ! grep -q '^\[tool\.nbpress\]' pyproject.toml 2>/dev/null; then
+            echo "pyproject.toml has no [tool.nbpress] table yet; no notebooks to check"
+            exit 0
+          fi
+          nbpress-publish --check-only
+          nbpress-render --check-stale
+      - name: Run the tier's tests
+        if: env.TIER_SELECTED == 'true'
+        run: |
+          if [ ! -d "tests/${{ matrix.tier }}" ]; then
+            echo "tests/${{ matrix.tier }} does not exist yet; nothing to run"
+            exit 0
+          fi
+          python -m pytest "tests/${{ matrix.tier }}" -v

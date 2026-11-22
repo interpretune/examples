@@ -1,0 +1,9 @@
+EXTENDS: gemma3_1b_it_probe_swap.yaml
+
+# Workspace-flip versus logit-flip ordering: swap the intermediate over one band, then read the lens at the
+# final position of every fitted layer above it. Skips the per-layer sweep, which the probe_swap config runs.
+EXPERIMENT_NAME: gemma3_1b_it_flip_order
+
+EXPERIMENT:
+  flip_band: [9, 15]
+  skip_sweep: true

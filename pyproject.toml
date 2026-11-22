@@ -7,6 +7,9 @@
 pythonpath = [".", "dashboards"]
 testpaths = ["tests"]
 addopts = "--strict-markers --color=yes"
+markers = [
+    "hf_live: the test must reach the live Hugging Face Hub (skipped when HF_HUB_OFFLINE=1)",
+]
 
 [tool.nbpress]
 # The tutorials, read by nbpress (https://github.com/speediedan/nbpress, the commit interpretune pins): nbpress-publish

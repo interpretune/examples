@@ -1,0 +1,73 @@
+name: Set up interpretune
+description: >-
+  Install interpretune at a given commit (default: the one interpretune.ref pins) into a fresh venv, through the
+  install flow interpretune's README documents, and put the venv on PATH.
+inputs:
+  ref:
+    description: "An interpretune commit, branch or tag; empty means the commit interpretune.ref pins"
+    required: false
+    default: ""
+  torch-backend:
+    description: "uv's torch wheel variant (cpu for the hosted CPU jobs)"
+    required: false
+    default: "cpu"
+outputs:
+  sha:
+    description: "The interpretune commit actually installed"
+    value: ${{ steps.resolve.outputs.sha }}
+runs:
+  using: composite
+  steps:
+    - name: Resolve the interpretune ref
+      id: ref
+      shell: bash
+      run: |
+        ref="${{ inputs.ref }}"
+        if [ -z "${ref}" ]; then
+          ref="$(grep -v '^#' interpretune.ref | grep -v '^[[:space:]]*$' | head -1 | tr -d '[:space:]')"
+        fi
+        if [ -z "${ref}" ]; then
+          echo "::error::interpretune.ref names no commit" >&2
+          exit 1
+        fi
+        echo "ref=${ref}" >> "${GITHUB_OUTPUT}"
+    - name: Check out interpretune
+      uses: actions/checkout@v4
+      with:
+        repository: interpretune/interpretune
+        ref: ${{ steps.ref.outputs.ref }}
+        path: _interpretune
+    - name: Record the installed commit
+      id: resolve
+      shell: bash
+      run: echo "sha=$(git -C _interpretune rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+    - name: Install uv and Python
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: "3.13"
+        activate-environment: false
+        enable-cache: true
+    - name: Install interpretune (README contributor flow, uv overrides honored)
+      shell: bash
+      env:
+        UV_TORCH_BACKEND: ${{ inputs.torch-backend }}
+      run: |
+        venv="${RUNNER_TEMP}/it-venv"
+        env -u PYTHONPATH uv venv "${venv}" --python 3.13
+        # run from interpretune's checkout so uv reads its [tool.uv] override-dependencies, which pip would ignore
+        (cd _interpretune && env -u PYTHONPATH VIRTUAL_ENV="${venv}" \
+          uv pip install -e ".[examples,lightning]" --group git-deps --group test)
+        echo "${venv}/bin" >> "${GITHUB_PATH}"
+        echo "VIRTUAL_ENV=${venv}" >> "${GITHUB_ENV}"
+    - name: Prove which interpretune is installed
+      shell: bash
+      run: |
+        python - <<'PY'
+        import pathlib, interpretune
+        path = pathlib.Path(interpretune.__file__).resolve()
+        expected = pathlib.Path("_interpretune").resolve()
+        print(f"interpretune {path}")
+        if expected not in path.parents:
+            raise SystemExit(f"interpretune resolved outside the checked-out commit: {path}")
+        PY
+        echo "interpretune commit: ${{ steps.resolve.outputs.sha }}"

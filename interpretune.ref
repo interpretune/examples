@@ -1,0 +1,5 @@
+# The interpretune commit these examples are validated against. CI installs interpretune from this commit with its
+# supported flow (the `examples` and `lightning` extras, the `git-deps` and `test` groups); the scheduled run also
+# tests against interpretune `main`, and the bump workflow opens a pull request that moves this pin. It becomes a
+# release version once interpretune publishes one that carries what the tutorials use.
+1750a8a7c57c21be22b10a815ef202e8a3cff1b8

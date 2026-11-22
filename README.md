@@ -32,3 +32,11 @@ Documentation: <https://interpretune.org/projects/examples/> (a subproject of th
 The design is recorded on
 [interpretune#849](https://github.com/interpretune/interpretune/issues/849); the move into this repository is
 [interpretune#1017](https://github.com/interpretune/interpretune/issues/1017).
+
+## CI
+
+- **Per pull request** (`.github/workflows/ci.yml`): each tier runs only when its paths change. Those tiers are tutorials (which also run when a component changes), components, dashboards and the catalog. A change to shared configuration runs every tier. Tests run on CPU against the interpretune commit `interpretune.ref` pins, installed through interpretune's documented install flow. The tutorials tier also checks that the published notebooks and rendered artifacts are current.
+- **Scheduled** (`.github/workflows/scheduled.yml`, daily): every tier against both the pinned interpretune and interpretune `main`. A failure opens an issue labeled `scheduled-failure`.
+- **The pin moves by pull request** (`.github/workflows/bump-interpretune.yml`, weekly): it opens a pull request when interpretune `main` has moved.
+
+Secrets: `HF_TOKEN` (read access to the Hub repositories the tests pull) and `EXAMPLES_BOT_TOKEN` (for the bump pull request, so its CI runs).

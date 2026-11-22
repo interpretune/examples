@@ -1,0 +1,47 @@
+# Opens a pull request that moves interpretune.ref to interpretune main's current commit, so the pin never goes stale
+# unnoticed. A pull request opened with the workflow's own token does not trigger CI, so this uses the
+# EXAMPLES_BOT_TOKEN secret (a token allowed to push branches and open pull requests here) and refuses, naming it,
+# when that secret is absent.
+name: Bump interpretune
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.EXAMPLES_BOT_TOKEN }}
+    steps:
+      - name: Require the bot token
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "::error::EXAMPLES_BOT_TOKEN is not set; it is needed so the bump pull request runs CI" >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.EXAMPLES_BOT_TOKEN }}
+      - name: Open the bump pull request when main has moved
+        run: |
+          current="$(grep -v '^#' interpretune.ref | grep -v '^[[:space:]]*$' | head -1 | tr -d '[:space:]')"
+          latest="$(gh api repos/interpretune/interpretune/commits/main --jq .sha)"
+          if [ -z "${latest}" ]; then echo "::error::could not read interpretune main" >&2; exit 1; fi
+          if [ "${current}" = "${latest}" ]; then echo "interpretune.ref is current (${current})"; exit 0; fi
+          branch="bump/interpretune-${latest:0:12}"
+          if git ls-remote --exit-code --heads origin "${branch}" >/dev/null; then
+            echo "${branch} already exists"; exit 0
+          fi
+          sed -i "s/^${current}\$/${latest}/" interpretune.ref
+          git config user.name "interpretune-examples-bot"
+          git config user.email "interpretune-examples-bot@users.noreply.github.com"
+          git switch -c "${branch}"
+          git commit -am "Move interpretune.ref to interpretune main ${latest:0:12}"
+          git push origin "${branch}"
+          gh pr create --title "Move interpretune.ref to interpretune main ${latest:0:12}" \
+            --body "interpretune main moved from ${current} to ${latest}: https://github.com/interpretune/interpretune/compare/${current}...${latest}"

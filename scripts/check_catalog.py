@@ -25,6 +25,9 @@ REQUIRED = {
 }
 REPO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$")
 SHA = re.compile(r"^[0-9a-f]{40}$")
+# Kinds that only define things other components compose (compose_ref), so there is no configuration of their own to
+# run. An entry made only of these may set ``smoke: null``; any other entry must name its smoke configuration.
+DEFINITIONS_ONLY = {"promptconfigs"}
 
 
 def check_entry(i: int, entry: object, root: Path) -> list[str]:
@@ -41,9 +44,13 @@ def check_entry(i: int, entry: object, root: Path) -> list[str]:
         problems.append(f"{where}: revision {rev!r} is not a full 40-character sha")
     if "kinds" in entry and not (isinstance(kinds, list) and kinds and all(isinstance(k, str) and k for k in kinds)):
         problems.append(f"{where}: kinds must be a non-empty list of names")
+    definitions_only = isinstance(kinds, list) and bool(kinds) and set(kinds) <= DEFINITIONS_ONLY
     for k in ("interpretune", "owner", "smoke"):
+        if k == "smoke" and entry.get(k) is None and definitions_only:
+            continue  # nothing of its own to run: other components' configurations compose it
         if k in entry and not (isinstance(entry[k], str) and entry[k].strip()):
-            problems.append(f"{where}: {k} must be a non-empty string")
+            hint = f" (null is accepted only when every kind is one of {sorted(DEFINITIONS_ONLY)})" if k == "smoke" else ""
+            problems.append(f"{where}: {k} must be a non-empty string{hint}")
     fp = entry.get("first_party")
     if "first_party" in entry and not isinstance(fp, bool):
         problems.append(f"{where}: first_party must be true or false")

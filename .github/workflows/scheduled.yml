@@ -1,0 +1,61 @@
+# The scheduled full run: every tier's tests and the notebook checks, against the interpretune commit interpretune.ref
+# pins and against interpretune main. Tutorials break most often because the library moved, which a path-filtered PR
+# run never sees, so this is the run that catches it. A failure opens (or comments on) one issue per interpretune
+# target, labeled scheduled-failure.
+name: Scheduled full run
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full:
+    name: full (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [pinned, main]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      IT_COMPONENTS_HUB_CACHE: ${{ github.workspace }}/../components-hub-cache
+    steps:
+      - uses: actions/checkout@v4
+      - id: setup
+        uses: ./.github/actions/setup-interpretune
+        with:
+          ref: ${{ matrix.target == 'main' && 'main' || '' }}
+      - name: Catalog
+        run: uv run --no-project --with pyyaml python scripts/check_catalog.py catalog.yaml
+      - name: Published notebooks and rendered artifacts are current
+        run: |
+          nbpress-publish --check-only
+          nbpress-render --check-stale
+      - name: Every tier's tests
+        run: python -m pytest tests -v
+      - name: Record the failure in an issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ matrix.target }}
+          SHA: ${{ steps.setup.outputs.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Scheduled full run fails against interpretune ${TARGET}"
+          body="The scheduled full run failed against interpretune ${TARGET} (commit ${SHA}). Run: ${RUN_URL}"
+          gh label create scheduled-failure --color B60205 --description "the scheduled full run failed" 2>/dev/null || true
+          existing="$(gh issue list --state open --label scheduled-failure --search "in:title \"${title}\"" --json number --jq '.[0].number')"
+          if [ -n "${existing}" ]; then
+            gh issue comment "${existing}" --body "${body}"
+          else
+            gh issue create --title "${title}" --label scheduled-failure --body "${body}"
+          fi
+    permissions:
+      contents: read
+      issues: write

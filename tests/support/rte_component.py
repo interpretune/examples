@@ -7,7 +7,20 @@ cached fails there, naming the fetch that fixes it, rather than falling back to 
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import ModuleType
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def rte_entrypoint_src() -> Path:
+    """``rte_boolq.py``, the RTE component's module entrypoint, from this repository's ``components/rte``.
+
+    Interpretune's version reads the file from the warmed ``speediedan/rte`` snapshot because the in-tree copy left its
+    tree; the publish source lives here now, so a local publish of ``components/rte`` takes its entrypoint from the same
+    tree it publishes.
+    """
+    return REPO_ROOT / "components" / "rte" / "rte_boolq.py"
 
 
 def rte_entrypoint_module() -> ModuleType:

@@ -1,0 +1,125 @@
+it_schema_version: 1
+kinds:
+- experiment
+requires:
+  interpretune: '>=0.1.dev0'
+  components:
+  - speediedan/rte@738e41229e39379c432da4e5830af01d6e8960b2
+experiments:
+  gemma3_1b_it_local_color_fruit_orange:
+    config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange.yaml
+    pipeline: exp/concept_direction.py
+    files:
+    - concept_direction/configs/base_gemma3_it_local.yaml
+    - concept_direction/configs/cp_color_fruit_orange_gemma_it.yaml
+    - exp/pipeline_patterns.py
+    - exp/analysis/concept_direction_analysis.py
+    - exp/analysis/intervention_drift_analysis.py
+    - concept_direction/concept_direction_template.ipynb
+    - exp/_experiment_hooks.py
+    - exp/__init__.py
+    - exp/analysis/__init__.py
+    - exp/_prompt_shim.py
+  gemma3_1b_it_local_color_fruit_orange_fs_l10_n5:
+    config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5.yaml
+    pipeline: exp/concept_direction.py
+    files:
+    - concept_direction/configs/base_gemma3_it_local.yaml
+    - concept_direction/configs/cp_color_fruit_orange_gemma_it.yaml
+    - exp/pipeline_patterns.py
+    - exp/analysis/concept_direction_analysis.py
+    - exp/analysis/intervention_drift_analysis.py
+    - concept_direction/concept_direction_template.ipynb
+    - exp/_experiment_hooks.py
+    - exp/__init__.py
+    - exp/analysis/__init__.py
+    - exp/_prompt_shim.py
+  gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_answer_basis:
+    config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_answer_basis.yaml
+    pipeline: exp/concept_direction.py
+    files:
+    - concept_direction/configs/base_gemma3_it_local.yaml
+    - concept_direction/configs/cp_color_fruit_orange_gemma_it.yaml
+    - exp/pipeline_patterns.py
+    - exp/analysis/concept_direction_analysis.py
+    - exp/analysis/intervention_drift_analysis.py
+    - concept_direction/concept_direction_template.ipynb
+    - exp/_experiment_hooks.py
+    - exp/__init__.py
+    - exp/analysis/__init__.py
+    - exp/_prompt_shim.py
+  gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5:
+    config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5.yaml
+    pipeline: exp/concept_direction.py
+    files:
+    - concept_direction/configs/base_gemma3_it_local.yaml
+    - concept_direction/configs/cp_color_fruit_orange_gemma_it.yaml
+    - exp/pipeline_patterns.py
+    - exp/analysis/concept_direction_analysis.py
+    - exp/analysis/intervention_drift_analysis.py
+    - concept_direction/concept_direction_template.ipynb
+    - exp/_experiment_hooks.py
+    - exp/__init__.py
+    - exp/analysis/__init__.py
+    - exp/_prompt_shim.py
+  gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5_any:
+    config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5_any.yaml
+    pipeline: exp/concept_direction.py
+    files:
+    - concept_direction/configs/base_gemma3_it_local.yaml
+    - concept_direction/configs/cp_color_fruit_orange_gemma_it.yaml
+    - exp/pipeline_patterns.py
+    - exp/analysis/concept_direction_analysis.py
+    - exp/analysis/intervention_drift_analysis.py
+    - concept_direction/concept_direction_template.ipynb
+    - exp/_experiment_hooks.py
+    - exp/__init__.py
+    - exp/analysis/__init__.py
+    - exp/_prompt_shim.py
+  gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5_pos_noact_constrained:
+    config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5_pos_noact_constrained.yaml
+    pipeline: exp/concept_direction.py
+    files:
+    - concept_direction/configs/base_gemma3_it_local.yaml
+    - concept_direction/configs/cp_color_fruit_orange_gemma_it.yaml
+    - exp/pipeline_patterns.py
+    - exp/analysis/concept_direction_analysis.py
+    - exp/analysis/intervention_drift_analysis.py
+    - concept_direction/concept_direction_template.ipynb
+    - exp/_experiment_hooks.py
+    - exp/__init__.py
+    - exp/analysis/__init__.py
+    - exp/_prompt_shim.py
+  gemma3_1b_it_local_color_fruit_orange_signed_fs_l10_n5:
+    config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_signed_fs_l10_n5.yaml
+    pipeline: exp/concept_direction.py
+    files:
+    - concept_direction/configs/base_gemma3_it_local.yaml
+    - concept_direction/configs/cp_color_fruit_orange_gemma_it.yaml
+    - exp/pipeline_patterns.py
+    - exp/analysis/concept_direction_analysis.py
+    - exp/analysis/intervention_drift_analysis.py
+    - concept_direction/concept_direction_template.ipynb
+    - exp/_experiment_hooks.py
+    - exp/__init__.py
+    - exp/analysis/__init__.py
+    - exp/_prompt_shim.py
+  gemma3_1b_it_local_latent_dynamics_color_fruit_orange_fs_l10_n5:
+    config: concept_direction/configs/gemma3_1b_it_local_latent_dynamics_color_fruit_orange_fs_l10_n5.yaml
+    pipeline: exp/concept_direction.py
+    files:
+    - concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5.yaml
+    - concept_direction/configs/gemma3_1b_it_local_color_fruit_orange.yaml
+    - concept_direction/configs/base_gemma3_it_local.yaml
+    - concept_direction/configs/cp_color_fruit_orange_gemma_it.yaml
+    - exp/pipeline_patterns.py
+    - exp/analysis/concept_direction_analysis.py
+    - exp/analysis/concept_direction_latent_dynamics.py
+    - exp/analysis/intervention_drift_analysis.py
+    - exp/_experiment_hooks.py
+    - exp/__init__.py
+    - exp/analysis/__init__.py
+    - exp/_prompt_shim.py
+# Published beside the experiment payloads so the latent-dynamics stage table's CPU checks travel with the component.
+extra_files:
+- tests/test_latent_dynamics_stages.py

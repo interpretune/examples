@@ -1,0 +1,298 @@
+---
+# Collection identity: versions the op CONTRACT SET (names, schemas, traits), not a package. No
+# `requires:` window is declared, for the reason the seed collections record: a `>=0.1`-style floor
+# does not match a `0.1.0.devN+g<sha>` source install, so a naive window silently skips the whole
+# collection in any dev checkout.
+collection:
+  name: jlens_steering_ops
+  version: 0.4.0
+
+jlens_concept_patch_pair:
+  description: >-
+    Build the (2, d_model) J-lens pole pair for a concept token pair and stage a lens-coordinate
+    patch intervention (op, hook pattern, tensor) on the analysis batch, ready for
+    model_fwd_intervention. Lens artifacts resolve from neuronpedia/jacobian-lens by default.
+    NOTE: description deliberately avoids double quotes -- interpretune < the #273-era escape fix
+    rendered quoted descriptions into an unparseable op cache (silent recompile every session).
+  implementation: jlens_ops.jlens_concept_patch_pair_impl
+  # This op stages a `patch` intervention, so it declares that. Without the declaration an
+  # incompatible backend can only refuse after every earlier op in a composition has already run, and a
+  # consumer has no way to check compatibility short of executing it.
+  required_ops: [patch]
+  aliases: []
+  input_schema:
+    concept_group_a_token_ids:
+      datasets_dtype: int64
+      required: true
+      non_tensor: true
+    concept_group_b_token_ids:
+      datasets_dtype: int64
+      required: true
+      non_tensor: true
+    jlens_layer:
+      datasets_dtype: int64
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_layer_percentile:
+      datasets_dtype: float32
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_repo_id:
+      datasets_dtype: string
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_model_id:
+      datasets_dtype: string
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_lens_path:
+      datasets_dtype: string
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_apply_final_norm:
+      datasets_dtype: bool
+      required: false
+      non_tensor: true
+      sequence_type: false
+  output_schema:
+    # Staged for the next op in the composition and consumed there: a batch-level tensor (the pole pair, or the
+    # swap delta), not a per-example column, so it is not persisted to the analysis store.
+    intervention_tensor:
+      datasets_dtype: float32
+      required: true
+      sequence_type: true
+      intermediate_only: true
+    intervention_op:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+    intervention_hook_pattern:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+    jlens_source_layer:
+      datasets_dtype: int64
+      required: true
+      non_tensor: true
+      sequence_type: false
+    jlens_basis:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+
+jlens_concept_reject_pair:
+  description: >-
+    Build the same (2, d_model) J-lens pole pair for a concept token pair and stage a reject
+    intervention over it (the pair as the basis), ready for model_fwd_intervention: the forward removes
+    the activation's component in the pair's span instead of swapping its coordinates. The J-space path
+    for a backend that cannot express a patch (a swap needs per-token targets measured during the forward;
+    rejection is a fixed projector). Lens artifacts resolve from neuronpedia/jacobian-lens by default.
+  implementation: jlens_ops.jlens_concept_reject_pair_impl
+  # Stages a `reject` intervention, so it declares that, for the same reason the patch op does: an
+  # incompatible backend refuses before any earlier op in a composition runs.
+  required_ops: [reject]
+  aliases: []
+  input_schema:
+    concept_group_a_token_ids:
+      datasets_dtype: int64
+      required: true
+      non_tensor: true
+    concept_group_b_token_ids:
+      datasets_dtype: int64
+      required: true
+      non_tensor: true
+    jlens_layer:
+      datasets_dtype: int64
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_layer_percentile:
+      datasets_dtype: float32
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_repo_id:
+      datasets_dtype: string
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_model_id:
+      datasets_dtype: string
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_lens_path:
+      datasets_dtype: string
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_apply_final_norm:
+      datasets_dtype: bool
+      required: false
+      non_tensor: true
+      sequence_type: false
+  output_schema:
+    # Staged for the next op in the composition and consumed there: a batch-level tensor (the pole pair, or the
+    # swap delta), not a per-example column, so it is not persisted to the analysis store.
+    intervention_tensor:
+      datasets_dtype: float32
+      required: true
+      sequence_type: true
+      intermediate_only: true
+    intervention_op:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+    intervention_hook_pattern:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+    jlens_source_layer:
+      datasets_dtype: int64
+      required: true
+      non_tensor: true
+      sequence_type: false
+    jlens_basis:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+
+jlens_concept_patch_delta:
+  description: >-
+    Build the same (2, d_model) J-lens pole pair, capture the clean activation at the pair's hook through
+    the module's model backend, and stage the coordinate swap as a static add: the delta V(alpha*sigma(c) - c)
+    with c = V^+ h at the final real position, ready for model_fwd_intervention at scale 1. Exact patch on
+    any backend that declares add and capture, for a backend that cannot express patch itself (its
+    steering parameters are static; a swap needs the activation's own coordinates). One prompt at a time.
+    Lens artifacts resolve from neuronpedia/jacobian-lens by default.
+  implementation: jlens_ops.jlens_concept_patch_delta_impl
+  # Stages an `add`, so it declares that: the swap itself is computed here from a captured clean pass,
+  # and the only thing the forward applies is the resulting static delta.
+  required_ops: [add]
+  aliases: []
+  input_schema:
+    concept_group_a_token_ids:
+      datasets_dtype: int64
+      required: true
+      non_tensor: true
+    concept_group_b_token_ids:
+      datasets_dtype: int64
+      required: true
+      non_tensor: true
+    jlens_layer:
+      datasets_dtype: int64
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_layer_percentile:
+      datasets_dtype: float32
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_repo_id:
+      datasets_dtype: string
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_model_id:
+      datasets_dtype: string
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_lens_path:
+      datasets_dtype: string
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_apply_final_norm:
+      datasets_dtype: bool
+      required: false
+      non_tensor: true
+      sequence_type: false
+    jlens_patch_scale:
+      datasets_dtype: float32
+      required: false
+      non_tensor: true
+      sequence_type: false
+  output_schema:
+    # Staged for the next op in the composition and consumed there: a batch-level tensor (the pole pair, or the
+    # swap delta), not a per-example column, so it is not persisted to the analysis store.
+    intervention_tensor:
+      datasets_dtype: float32
+      required: true
+      sequence_type: true
+      intermediate_only: true
+    intervention_op:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+    intervention_hook_pattern:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+    jlens_source_layer:
+      datasets_dtype: int64
+      required: true
+      non_tensor: true
+      sequence_type: false
+    jlens_basis:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+    intervention_position_scope:
+      datasets_dtype: string
+      required: true
+      non_tensor: true
+      sequence_type: false
+    jlens_clean_coords:
+      datasets_dtype: float32
+      required: true
+      sequence_type: true
+    jlens_swapped_coords:
+      datasets_dtype: float32
+      required: true
+      sequence_type: true
+
+# Composite operations
+composite_operations:
+  jlens_patch_intervention:
+    # Crosses the collection boundary deliberately: the first op is this collection's, the second is
+    # interpretune's bundled intervention op. Bundled ops win bare names, so `model_fwd_intervention`
+    # resolves to the in-tree implementation the staged fields were designed for.
+    composition: jlens_concept_patch_pair.model_fwd_intervention
+    # A declared sample for interpretune's OpCollectionConformance: the composite runs on it end to end and must
+    # yield its required output columns. Token ids only, so the lens resolves as a caller's would; this
+    # collection's own conformance test fills jlens_lens_path with a synthetic lens so the check runs offline.
+    conformance:
+      run_inputs:
+        concept_group_a_token_ids: [262]
+        concept_group_b_token_ids: [290]
+  jlens_reject_intervention:
+    # The reject twin of the composite above: the pair op stages the span, the bundled intervention op
+    # rejects it. Same boundary crossing, same bare-name resolution.
+    composition: jlens_concept_reject_pair.model_fwd_intervention
+    # A declared sample for interpretune's OpCollectionConformance: the composite runs on it end to end and must
+    # yield its required output columns. Token ids only, so the lens resolves as a caller's would; this
+    # collection's own conformance test fills jlens_lens_path with a synthetic lens so the check runs offline.
+    conformance:
+      run_inputs:
+        concept_group_a_token_ids: [262]
+        concept_group_b_token_ids: [290]
+  jlens_patch_via_add_intervention:
+    # The two-pass patch: the delta op captures the clean pass and stages the swap as a static add, the
+    # bundled intervention op applies it. Same boundary crossing as the composites above.
+    composition: jlens_concept_patch_delta.model_fwd_intervention

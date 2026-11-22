@@ -1,0 +1,38 @@
+EXTENDS: gemma3_1b_it_local_color_fruit_orange_fs_l10_n5.yaml
+
+EXPERIMENT_NAME: gemma3_1b_it_local_latent_dynamics_color_fruit_orange_fs_l10_n5
+
+# The latent-dynamics analysis (exp/analysis/concept_direction_latent_dynamics.py): one concept direction built from
+# each state the model computes for the pair, compared stage by stage. Without `stages`, the module's default table is
+# used. J-lens stages are added per layer with `jlens_layers` (and `jlens_basis`, default jlens_folded) once the lens
+# layers published for this model are confirmed; none are configured yet.
+# Only the probe examples the model answers as expected enter the store: with every example kept, the two Color examples
+# the model answers as Fruit would pull the example-weighted directions with weights as large as their errors.
+ANALYSIS:
+  store_concept_correct_only: true
+
+LATENT_DYNAMICS:
+  stage_top_n: 5
+  # one attribution graph per stage direction, with its top features and their intervention
+  stage_graphs:
+    enabled: true
+  # unit directions at each of these scales; the store-state differences they come from have norms of 25-68
+  steering:
+    scale_factors: [10, 25, 50, 100]
+  # read the store states at a mid-layer site and steer there; the store-site column above follows the final norm,
+  # so it only reads each direction's alignment with the target unembedding difference
+  causal_steering:
+    hook: blocks.10.hook_out
+    # fractions of each stage's own group separation at that site (residual norms there are 300-600, so absolute
+    # scales of 10-100 move little): a stage direction steered by the separation it was read from
+    relative_scales: [0.25, 0.5, 1.0, 2.0]
+  projection:
+    method: umap
+    # UMAP needs the `examples` extra; without it the run refuses rather than labelling a PCA projection as UMAP.
+    fallback: refuse
+    umap_backend_preference: cpu
+    n_components: 2
+    n_neighbors: 6
+    min_dist: 0.05
+    metric: cosine
+    random_state: 17

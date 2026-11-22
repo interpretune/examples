@@ -1,0 +1,9 @@
+EXTENDS: gemma3_1b_it_probe_swap.yaml
+
+# Papermill smoke path: three items and two lens layers, enough to exercise every measurement once.
+EXPERIMENT_NAME: gemma3_1b_it_probe_swap_smoke
+
+EXPERIMENT:
+  limit: 3
+  layers: [8, 20]
+  bands: [[8, 20]]

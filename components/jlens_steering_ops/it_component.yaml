@@ -1,0 +1,6 @@
+it_schema_version: 1
+kinds:
+- ops
+ops:
+  files:
+  - jlens_ops.yaml

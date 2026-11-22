@@ -1,0 +1,60 @@
+# interpretune component manifest (schema v1): the J-space battery (interpretune#425).
+it_schema_version: 1
+kinds:
+- experiment
+requires:
+  interpretune: '>=0.1.dev0'
+experiments:
+  gemma3_4b_it_probe_swap:
+    config: jspace_battery/configs/gemma3_4b_it_probe_swap.yaml
+    pipeline: exp/jspace_battery.py
+    files:
+    - data/probe-swap.json
+    - data/lens-eval-multihop.json
+    - data/NOTICE.md
+    - exp/__init__.py
+    - jspace_battery/configs/base_jspace_battery.yaml
+    - jspace_battery/jspace_battery_template.ipynb
+  gemma3_1b_it_probe_swap:
+    config: jspace_battery/configs/gemma3_1b_it_probe_swap.yaml
+    pipeline: exp/jspace_battery.py
+    files:
+    - data/probe-swap.json
+    - data/lens-eval-multihop.json
+    - data/NOTICE.md
+    - exp/__init__.py
+    - jspace_battery/configs/base_jspace_battery.yaml
+    - jspace_battery/jspace_battery_template.ipynb
+  gemma3_1b_it_probe_swap_smoke:
+    config: jspace_battery/configs/gemma3_1b_it_probe_swap_smoke.yaml
+    pipeline: exp/jspace_battery.py
+    files:
+    - data/probe-swap.json
+    - data/lens-eval-multihop.json
+    - data/NOTICE.md
+    - exp/__init__.py
+    - jspace_battery/configs/base_jspace_battery.yaml
+    - jspace_battery/jspace_battery_template.ipynb
+    - jspace_battery/configs/gemma3_1b_it_probe_swap.yaml
+  gemma3_4b_it_flip_order:
+    config: jspace_battery/configs/gemma3_4b_it_flip_order.yaml
+    pipeline: exp/jspace_battery.py
+    files:
+    - data/probe-swap.json
+    - data/lens-eval-multihop.json
+    - data/NOTICE.md
+    - exp/__init__.py
+    - jspace_battery/configs/base_jspace_battery.yaml
+    - jspace_battery/jspace_battery_template.ipynb
+    - jspace_battery/configs/gemma3_4b_it_probe_swap.yaml
+  gemma3_1b_it_flip_order:
+    config: jspace_battery/configs/gemma3_1b_it_flip_order.yaml
+    pipeline: exp/jspace_battery.py
+    files:
+    - data/probe-swap.json
+    - data/lens-eval-multihop.json
+    - data/NOTICE.md
+    - exp/__init__.py
+    - jspace_battery/configs/base_jspace_battery.yaml
+    - jspace_battery/jspace_battery_template.ipynb
+    - jspace_battery/configs/gemma3_1b_it_probe_swap.yaml

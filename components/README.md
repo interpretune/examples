@@ -5,8 +5,9 @@ the manifest (`it_component.yaml`), the entrypoint module and every payload it d
 kept here, because publishing generates them: the card (`README.md`) and `.gitattributes`.
 
 A component is published from a reviewed commit of this repository, and the revision it was published to is recorded
-in `catalog.yaml` with the component's entry, so a pin in interpretune or a tutorial names a revision whose source can
-be read here.
+in the table below, so a pin in interpretune or a tutorial names a revision whose source can be read here. A component
+is also listed in `catalog.yaml` once it has a CPU smoke configuration the scheduled run executes (or, like
+`prompt-configs`, only defines what other components compose); the catalog check refuses an entry without one.
 
 | directory | Hub repository | published revision |
 | --- | --- | --- |
@@ -31,3 +32,8 @@ are not built by `local_publish`, so the files here are the published files as t
 `concept_direction_ops` was first generated from interpretune's bundled `concept` op family
 (`scripts/publish_op_collection.py`) and has diverged from it since. Its source is now the directory here, not that
 family.
+
+Not yet in `catalog.yaml`, because none has a CPU smoke configuration chosen: `concept-direction`, `jspace-battery`
+and `prompt-analysis` (no CPU configuration picked yet), and the op collections `concept_direction_ops` (exercised by
+the tutorials that load it) and `jlens_steering_ops` (its own `tests/` run its CPU checks). Each gets its entry when a
+smoke configuration is chosen.

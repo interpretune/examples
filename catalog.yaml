@@ -24,38 +24,3 @@ components:
     owner: speediedan
     smoke: null  # definitions only: composed by other components' configurations (compose_ref), not run alone
     first_party: true
-  - repo: speediedan/concept-direction
-    revision: 1b173742869f717caf218f2e6afb4deb8f94d0e5
-    kinds: [experiment]
-    interpretune: '>=0.1.dev0'
-    owner: speediedan
-    smoke: null  # no CPU smoke configuration chosen yet
-    first_party: true
-  - repo: speediedan/concept_direction_ops
-    revision: 16affe3811eb8c5e601def07bd47b41ef4fcdf47
-    kinds: [ops]
-    interpretune: '>=0.1.0.dev0'
-    owner: speediedan
-    smoke: null  # an op collection: exercised by the tutorials that load it, not run alone
-    first_party: true
-  - repo: speediedan/jlens_steering_ops
-    revision: ebf92e02d14313bc676acde37a17ed1960c1c594
-    kinds: [ops]
-    interpretune: '>=0.1.dev0'
-    owner: speediedan
-    smoke: null  # an op collection: its own tests/ run its CPU checks
-    first_party: true
-  - repo: speediedan/jspace-battery
-    revision: 8cac45ebf7e72f2a7b277f30371261cd336a522d
-    kinds: [experiment]
-    interpretune: '>=0.1.dev0'
-    owner: speediedan
-    smoke: null  # no CPU smoke configuration chosen yet
-    first_party: true
-  - repo: speediedan/prompt-analysis
-    revision: d221f0e9293888836a0101509546968eced813bd
-    kinds: [module]
-    interpretune: '>=0.1.dev0'
-    owner: speediedan
-    smoke: null  # no CPU smoke configuration chosen yet
-    first_party: true

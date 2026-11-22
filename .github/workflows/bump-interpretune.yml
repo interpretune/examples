@@ -1,6 +1,6 @@
 # Opens a pull request that moves interpretune.ref to interpretune main's current commit, so the pin never goes stale
 # unnoticed. A pull request opened with the workflow's own token does not trigger CI, so this uses the
-# EXAMPLES_BOT_TOKEN secret (a token allowed to push branches and open pull requests here) and refuses, naming it,
+# EXAMPLE_BOT_TOKEN secret (a token allowed to push branches and open pull requests here) and refuses, naming it,
 # when that secret is absent.
 name: Bump interpretune
 
@@ -16,17 +16,17 @@ jobs:
   bump:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.EXAMPLES_BOT_TOKEN }}
+      GH_TOKEN: ${{ secrets.EXAMPLE_BOT_TOKEN }}
     steps:
       - name: Require the bot token
         run: |
           if [ -z "${GH_TOKEN}" ]; then
-            echo "::error::EXAMPLES_BOT_TOKEN is not set; it is needed so the bump pull request runs CI" >&2
+            echo "::error::EXAMPLE_BOT_TOKEN is not set; it is needed so the bump pull request runs CI" >&2
             exit 1
           fi
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.EXAMPLES_BOT_TOKEN }}
+          token: ${{ secrets.EXAMPLE_BOT_TOKEN }}
       - name: Open the bump pull request when main has moved
         run: |
           current="$(grep -v '^#' interpretune.ref | grep -v '^[[:space:]]*$' | head -1 | tr -d '[:space:]')"

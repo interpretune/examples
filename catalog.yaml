@@ -11,7 +11,7 @@
 #   first_party:   true when its source lives under components/
 components:
   - repo: speediedan/rte
-    revision: b1a920fc1400837a62bc7a2b155e39e5da206b86
+    revision: ade3bb026839f2c1eaa6dcbd5c2cb3413c1ae078
     kinds: [module, datamodule]
     interpretune: '>=0.1.dev0'
     owner: speediedan

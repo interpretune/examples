@@ -11,7 +11,7 @@ is also listed in `catalog.yaml` once it has a CPU smoke configuration the sched
 
 | directory | Hub repository | published revision |
 | --- | --- | --- |
-| `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `b1a920fc1400837a62bc7a2b155e39e5da206b86` |
+| `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `ade3bb026839f2c1eaa6dcbd5c2cb3413c1ae078` |
 | `prompt-configs/` | [`speediedan/prompt-configs`](https://huggingface.co/speediedan/prompt-configs) | `3d8b9710061283dd14c86a46f0c0649b5e262db0` |
 | `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `1b173742869f717caf218f2e6afb4deb8f94d0e5` |
 | `concept_direction_ops/` | [`speediedan/concept_direction_ops`](https://huggingface.co/speediedan/concept_direction_ops) | `16affe3811eb8c5e601def07bd47b41ef4fcdf47` |

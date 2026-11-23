@@ -1,7 +1,7 @@
 """``RunIf``: a ``pytest.mark.skipif`` factory for the conditions the tutorial tests declare.
 
 Stands in for interpretune's ``tests/runif.py``, carrying only the conditions this repository's tests pass:
-``bf16_cuda``, ``min_gpu_mem_gb``, ``optional`` and ``skip_windows``. The skip conditions and the mark kwargs are
+``bf16_cuda``, ``min_cuda_gpus``, ``min_gpu_mem_gb``, ``optional`` and ``skip_windows``. The skip conditions and the mark kwargs are
 interpretune's, so a test skips here exactly where it skips there, and the kwargs left on the mark are what
 ``tests/conftest.py`` reads to select a phase (``IT_RUN_CUDA_TESTS``, ``IT_RUN_OPTIONAL_TESTS``) and to check declared
 GPU memory at setup. A condition this module does not know is refused by name rather than ignored.
@@ -27,6 +27,7 @@ class RunIf:
     def __new__(
         cls,
         *args,
+        min_cuda_gpus: int = 0,
         min_gpu_mem_gb: float = 0,
         bf16_cuda: bool = False,
         skip_windows: bool = False,
@@ -36,10 +37,12 @@ class RunIf:
         """
         Args:
             *args: Any :class:`pytest.mark.skipif` positional arguments.
-            min_gpu_mem_gb: The GPU memory, in GiB of device TOTAL, the device this test uses must have. Checked when
+            min_cuda_gpus: Require this number of GPUs. The number is kept in the mark's kwargs, which is what
+                ``tests/conftest.py`` selects the cuda phase by.
+            min_gpu_mem_gb: The GPU memory, in GiB of device TOTAL, each device this test uses must have. Checked when
                 the test is set up, not at collection (which would initialize CUDA in every collecting process): a
                 smaller device skips the test, or fails it when ``IT_GPU_STRICT=1``, where a skip would hide a
-                misplaced test. Requires ``bf16_cuda``.
+                misplaced test. Requires ``min_cuda_gpus`` or ``bf16_cuda``.
             bf16_cuda: Require that the CUDA device supports bf16.
             skip_windows: Skip on the Windows platform.
             optional: Mark the test as for optional/extended testing. It runs only when the
@@ -49,17 +52,23 @@ class RunIf:
         if kwargs:
             raise TypeError(
                 f"RunIf does not know the condition(s) {sorted(kwargs)}: this repository carries only bf16_cuda, "
-                "min_gpu_mem_gb, optional and skip_windows. Add the condition here (from interpretune's "
+                "min_cuda_gpus, min_gpu_mem_gb, optional and skip_windows. Add the condition here (from interpretune's "
                 "tests/runif.py) rather than passing it through to the mark, where nothing would read it."
             )
         conditions = []
         reasons = []
 
+        if min_cuda_gpus:
+            conditions.append(torch.cuda.device_count() < min_cuda_gpus)
+            reasons.append(f"GPUs>={min_cuda_gpus}")
+            # used in conftest.py::pytest_collection_modifyitems
+            kwargs["min_cuda_gpus"] = min_cuda_gpus
+
         if min_gpu_mem_gb:
-            if not bf16_cuda:
+            if not (min_cuda_gpus or bf16_cuda):
                 raise ValueError(
                     f"RunIf(min_gpu_mem_gb={min_gpu_mem_gb}) declares GPU memory for a test that declares no GPU: "
-                    "add bf16_cuda=True, or drop the memory declaration."
+                    "add min_cuda_gpus=N or bf16_cuda=True, or drop the memory declaration."
                 )
             if min_gpu_mem_gb < 0:
                 raise ValueError(f"RunIf(min_gpu_mem_gb={min_gpu_mem_gb}) must be a positive number of GiB.")

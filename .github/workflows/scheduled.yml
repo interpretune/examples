@@ -1,7 +1,7 @@
-# The scheduled full run: every tier's tests and the notebook checks, against the interpretune commit interpretune.ref
-# pins and against interpretune main. Tutorials break most often because the library moved, which a path-filtered PR
-# run never sees, so this is the run that catches it. A failure opens (or comments on) one issue per interpretune
-# target, labeled scheduled-failure.
+# The scheduled full run: every tier's tests, each component's own tests, every catalog entry's smoke and the notebook
+# checks, against the interpretune commit interpretune.ref pins and against interpretune main. Tutorials break most
+# often because the library moved, which a path-filtered PR run never sees, so this is the run that catches it. A
+# failure opens (or comments on) one issue per interpretune target, labeled scheduled-failure.
 name: Scheduled full run
 
 on:
@@ -48,6 +48,12 @@ jobs:
         run: |
           if [ ! -d tests ]; then echo "no tests/ yet; nothing to run"; exit 0; fi
           python -m pytest tests -v
+      - name: Each component's own tests, from a Hub-shaped snapshot with empty caches, one process per component
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: python scripts/run_component_tests.py --published-layout
+      - name: Every catalog entry's smoke, from empty caches at its pinned revision
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: python scripts/catalog_smoke.py catalog.yaml
       - name: Record the failure in an issue
         if: failure()
         env:

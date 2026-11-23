@@ -6,8 +6,8 @@ kept here, because publishing generates them: the card (`README.md`) and `.gitat
 
 A component is published from a reviewed commit of this repository, and the revision it was published to is recorded
 in the table below, so a pin in interpretune or a tutorial names a revision whose source can be read here. A component
-is also listed in `catalog.yaml` once it has a CPU smoke configuration the scheduled run executes (or, like
-`prompt-configs`, only defines what other components compose); the catalog check refuses an entry without one.
+is also listed in `catalog.yaml` once it has a CPU smoke the scheduled run executes (or, like `prompt-configs`, only
+defines what other components compose); the catalog check refuses an entry without one.
 
 | directory | Hub repository | published revision |
 | --- | --- | --- |
@@ -33,7 +33,13 @@ are not built by `local_publish`, so the files here are the published files as t
 (`scripts/publish_op_collection.py`) and has diverged from it since. Its source is now the directory here, not that
 family.
 
-Not yet in `catalog.yaml`, because none has a CPU smoke configuration chosen: `concept-direction`, `jspace-battery`
-and `prompt-analysis` (no CPU configuration picked yet), and the op collections `concept_direction_ops` (exercised by
-the tutorials that load it) and `jlens_steering_ops` (its own `tests/` run its CPU checks). Each gets its entry when a
-smoke configuration is chosen.
+A component with no CPU session configuration may name its own CPU tests as its smoke, run from the published snapshot
+(`smoke: tests/`). `jlens_steering_ops` and `concept-direction` qualify that way, and join `catalog.yaml` once
+republished: their published tests fail from a pulled snapshot (one found its configuration through
+`Path(__file__).resolve()`, which leaves a snapshot for the blob store; the other read a component only an earlier run
+had cached), and the source here carries the fixes. Also not yet listed: `jspace-battery` and `prompt-analysis` (no CPU
+configuration and no CPU tests yet), and `concept_direction_ops` (no tests of its own).
+
+The components tier runs every component's tests the way a pull meets them (`scripts/run_component_tests.py
+--published-layout`: each file a symlink into a blob store, every cache empty), so a defect of that kind fails the
+pull request that introduces it rather than the scheduled smoke after a publish.

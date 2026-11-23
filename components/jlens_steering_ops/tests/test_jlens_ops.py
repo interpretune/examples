@@ -16,7 +16,9 @@ from pathlib import Path
 import pytest
 import torch
 
-COLLECTION_DIR = Path(__file__).resolve().parents[1]
+# absolute(), not resolve(): in a pulled Hub snapshot this file is a symlink into the blob store, and resolving it
+# would leave the snapshot, whose siblings are what this needs
+COLLECTION_DIR = Path(__file__).absolute().parents[1]
 
 D_MODEL, VOCAB = 8, 16
 SOURCE_LAYERS = [0, 2, 4]

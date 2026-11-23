@@ -13,7 +13,7 @@ is also listed in `catalog.yaml` once it has a CPU smoke configuration the sched
 | --- | --- | --- |
 | `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `ade3bb026839f2c1eaa6dcbd5c2cb3413c1ae078` |
 | `prompt-configs/` | [`speediedan/prompt-configs`](https://huggingface.co/speediedan/prompt-configs) | `3d8b9710061283dd14c86a46f0c0649b5e262db0` |
-| `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `1b173742869f717caf218f2e6afb4deb8f94d0e5` |
+| `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `289abeea1c9ba9d17ee17abcf6edfba5de54f495` |
 | `concept_direction_ops/` | [`speediedan/concept_direction_ops`](https://huggingface.co/speediedan/concept_direction_ops) | `16affe3811eb8c5e601def07bd47b41ef4fcdf47` |
 | `jlens_steering_ops/` | [`speediedan/jlens_steering_ops`](https://huggingface.co/speediedan/jlens_steering_ops) | `ebf92e02d14313bc676acde37a17ed1960c1c594` |
 | `jspace-battery/` | [`speediedan/jspace-battery`](https://huggingface.co/speediedan/jspace-battery) | `8cac45ebf7e72f2a7b277f30371261cd336a522d` |

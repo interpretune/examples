@@ -4,8 +4,10 @@ EXPERIMENT_NAME: gemma3_1b_it_local_latent_dynamics_color_fruit_orange_fs_l10_n5
 
 # The latent-dynamics analysis (exp/analysis/concept_direction_latent_dynamics.py): one concept direction built from
 # each state the model computes for the pair, compared stage by stage. Without `stages`, the module's default table is
-# used. J-lens stages are added per layer with `jlens_layers` (and `jlens_basis`, default jlens_folded) once the lens
-# layers published for this model are confirmed; none are configured yet.
+# used. J-lens stages are added per layer with `jlens_layers` (and `jlens_basis`, default jlens_folded): the lens is
+# resolved from `neuronpedia/jacobian-lens` by the model name, and the one published for gemma-3-1b-it
+# (`gemma-3-1b-it/jlens/Salesforce-wikitext`) maps source layers 0-24. Layers 6, 10 and 14 span the store site
+# (`causal_steering.hook` below is block 10), so the causal column is layer-matched for the layer-10 stage only.
 # Only the probe examples the model answers as expected enter the store: with every example kept, the two Color examples
 # the model answers as Fruit would pull the example-weighted directions with weights as large as their errors.
 ANALYSIS:
@@ -13,6 +15,8 @@ ANALYSIS:
 
 LATENT_DYNAMICS:
   stage_top_n: 5
+  jlens_layers: [6, 10, 14]
+  jlens_basis: jlens_folded
   # one attribution graph per stage direction, with its top features and their intervention
   stage_graphs:
     enabled: true

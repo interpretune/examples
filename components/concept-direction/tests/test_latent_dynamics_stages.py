@@ -260,7 +260,10 @@ LATENT_DYNAMICS_CONFIG = (
 
 
 def test_the_shipped_config_resolves_to_the_default_table_and_valid_projection_settings() -> None:
-    """The config is loaded through the pipeline's own loader, EXTENDS chain included, so a typo fails on CPU."""
+    """The config is loaded through the pipeline's own loader, EXTENDS chain included, so a typo fails on CPU.
+
+    Its table is the default one plus a folded J-lens stage at layers 6, 10 and 14, around the block-10 store site.
+    """
     import inspect
     from pathlib import Path
 
@@ -270,7 +273,12 @@ def test_the_shipped_config_resolves_to_the_default_table_and_valid_projection_s
     root = Path(__file__).resolve().parents[1]
     payload = load_experiment_config(root / LATENT_DYNAMICS_CONFIG)
     latent = payload["LATENT_DYNAMICS"]
-    assert stages_from_config(latent) == DEFAULT_STAGES
+    stages = stages_from_config(latent)
+    assert stages[: len(DEFAULT_STAGES)] == DEFAULT_STAGES
+    assert [(s.name, s.basis, s.mode, s.jlens_layer) for s in stages[len(DEFAULT_STAGES) :]] == [
+        (f"jlens_folded_l{layer}", "jlens_folded", "paired_rejection", layer) for layer in (6, 10, 14)
+    ]
+    assert latent["causal_steering"]["hook"] == "blocks.10.hook_out"
     accepted = set(inspect.signature(project_embeddings).parameters) - {"values"}
     unknown = sorted(set(latent["projection"]) - accepted)
     assert not unknown, f"projection settings project_embeddings does not take: {unknown}"

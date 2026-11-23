@@ -14,7 +14,7 @@ Documentation: <https://interpretune.org/projects/examples/> (a subproject of th
 | `tutorials/publish/<lane>/<name>.ipynb` | the published notebooks, produced from the dev lane by `nbpress-publish`; never edited by hand |
 | `docs/notebook_artifacts/<lane>/<name>.ipynb` | each published notebook executed, with outputs, as the docs render it (`nbpress-render`) |
 | `components/<name>/` | the source of a first-party Hub component, mirroring its Hub repository one to one, entrypoint included |
-| `catalog.yaml` | the curated list of first-party and community components, each with a pinned revision and a CPU smoke configuration |
+| `catalog.yaml` | the curated list of first-party and community components, each with a pinned revision and a CPU smoke (a configuration run for one batch, or the component's own CPU tests) |
 | `dashboards/` | Neuronpedia dashboard generation configurations |
 | `tests/` | tests for the tutorials, components and catalog |
 | `docs/` | the Read the Docs subproject |
@@ -35,8 +35,8 @@ The design is recorded on
 
 ## CI
 
-- **Per pull request** (`.github/workflows/ci.yml`): each tier runs only when its paths change. Those tiers are tutorials (which also run when a component changes), components, dashboards and the catalog. A change to shared configuration runs every tier. Tests run on CPU against the interpretune commit `interpretune.ref` pins, installed through interpretune's documented install flow. The tutorials tier also checks that the published notebooks and rendered artifacts are current.
-- **Scheduled** (`.github/workflows/scheduled.yml`, daily): every tier against both the pinned interpretune and interpretune `main`. A failure opens an issue labeled `scheduled-failure`.
+- **Per pull request** (`.github/workflows/ci.yml`): each tier runs only when its paths change. Those tiers are tutorials (which also run when a component changes), components, dashboards and the catalog. The components tier runs each component's own `tests/` (`scripts/run_component_tests.py --published-layout`: one process per component, since two components may ship a package of the same name, each staged as a pulled Hub snapshot with empty caches). A change to shared configuration runs every tier. Tests run on CPU against the interpretune commit `interpretune.ref` pins, installed through interpretune's documented install flow. The tutorials tier also checks that the published notebooks and rendered artifacts are current.
+- **Scheduled** (`.github/workflows/scheduled.yml`, daily): every tier and each component's own tests against both the pinned interpretune and interpretune `main`, then every catalog entry's smoke (`scripts/catalog_smoke.py`), each from empty caches at the entry's pinned revision. A failure opens an issue labeled `scheduled-failure`.
 - **The pin moves by pull request** (`.github/workflows/bump-interpretune.yml`, weekly): it opens a pull request when interpretune `main` has moved.
 
 Secrets: `HF_MCP_TOKEN_RW` (the Hub token interpretune's CI uses; the workflows pass it to the tests as `HF_TOKEN`, `HF_GATED_PUBLIC_REPO_AUTH_KEY` and `IT_HF_TOKEN`) and `EXAMPLE_BOT_TOKEN` (for the bump pull request, so its CI runs).

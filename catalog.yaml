@@ -7,7 +7,9 @@
 #   kinds:         the component kinds it provides
 #   interpretune:  the tested interpretune version range
 #   owner:         who fixes it when it breaks
-#   smoke:         a CPU configuration the scheduled run executes
+#   smoke:         what the scheduled run executes on CPU, from empty caches at `revision`: a module configuration
+#                  key (pulled, loaded and run for one batch), or, for a component with no CPU session configuration,
+#                  a directory of its published snapshot ending in `/` holding its own CPU tests (`tests/`)
 #   first_party:   true when its source lives under components/
 components:
   - repo: speediedan/rte

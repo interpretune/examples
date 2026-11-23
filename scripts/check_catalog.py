@@ -20,7 +20,7 @@ REQUIRED = {
     "kinds": "a non-empty list of component kinds",
     "interpretune": "the tested interpretune version range",
     "owner": "who fixes the entry when it breaks",
-    "smoke": "the CPU configuration the scheduled run executes",
+    "smoke": "what the scheduled run executes: a module configuration key, or a snapshot directory of CPU tests ending in /",
     "first_party": "true when the source lives under components/",
 }
 REPO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -49,7 +49,9 @@ def check_entry(i: int, entry: object, root: Path) -> list[str]:
         if k == "smoke" and entry.get(k) is None and definitions_only:
             continue  # nothing of its own to run: other components' configurations compose it
         if k in entry and not (isinstance(entry[k], str) and entry[k].strip()):
-            hint = f" (null is accepted only when every kind is one of {sorted(DEFINITIONS_ONLY)})" if k == "smoke" else ""
+            hint = (
+                f" (null is accepted only when every kind is one of {sorted(DEFINITIONS_ONLY)})" if k == "smoke" else ""
+            )
             problems.append(f"{where}: {k} must be a non-empty string{hint}")
     fp = entry.get("first_party")
     if "first_party" in entry and not isinstance(fp, bool):
@@ -58,7 +60,30 @@ def check_entry(i: int, entry: object, root: Path) -> list[str]:
         name = repo.split("/", 1)[1]
         if not (root / "components" / name).is_dir():
             problems.append(f"{where}: first_party, but components/{name}/ does not exist")
+        elif isinstance(entry.get("smoke"), str):
+            problems += check_first_party_smoke(where, root / "components" / name, entry["smoke"])
     return problems
+
+
+def check_first_party_smoke(where: str, source: Path, smoke: str) -> list[str]:
+    """A first-party entry's smoke must name something its source has: a test directory, or a manifest configuration.
+
+    The source is what was published at the entry's revision (``components/README.md``), so a smoke the source cannot
+    satisfy would fail only in the scheduled run, a day later.
+    """
+    if smoke.endswith("/"):
+        if not (source / smoke).is_dir():
+            return [f"{where}: smoke {smoke!r} names a test directory, but {source.name}/{smoke} does not exist"]
+        return []
+    manifest = yaml.safe_load((source / "it_component.yaml").read_text()) or {}
+    configs = (manifest.get("module") or {}).get("configs") or {}
+    if smoke not in configs:
+        known = ", ".join(configs) or "none"
+        return [
+            f"{where}: smoke {smoke!r} is not a module configuration of {source.name}/it_component.yaml (it has: "
+            f"{known}); a component without one names a test directory ending in '/'"
+        ]
+    return []
 
 
 def check(path: Path) -> list[str]:
@@ -71,7 +96,9 @@ def check(path: Path) -> list[str]:
         return [f"{path}: 'components' must be a list"]
     problems = [p for i, e in enumerate(entries) for p in check_entry(i, e, path.resolve().parent)]
     repos = [e.get("repo") for e in entries if isinstance(e, dict)]
-    problems += [f"{path}: repo {r!r} is listed more than once" for r in sorted({r for r in repos if repos.count(r) > 1})]
+    problems += [
+        f"{path}: repo {r!r} is listed more than once" for r in sorted({r for r in repos if repos.count(r) > 1})
+    ]
     return problems
 
 

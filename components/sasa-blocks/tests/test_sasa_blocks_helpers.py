@@ -7,7 +7,7 @@ import math
 import pytest
 import torch
 
-from it_examples.utils.sasa_blocks_helpers import SASARelease, native_matches_functional
+from sasa_blocks_helpers import SASARelease, native_matches_functional
 
 LAYER, GROUPS, RANK = 3, 16, 4
 
@@ -88,7 +88,7 @@ def test_a_native_block_edit_matches_the_same_edit_applied_functionally(gpt2, op
 
 def test_attached_with_a_zero_dose_the_release_leaves_the_forward_pass_unchanged(gpt2):
     from interpretune.analysis.venngram import latent_edit_spec
-    from it_examples.utils.sasa_blocks_helpers import at_column
+    from sasa_blocks_helpers import at_column
 
     lm, backend = gpt2
     release = _release(lm._module.config.n_embd)

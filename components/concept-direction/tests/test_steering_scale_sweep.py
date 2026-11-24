@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from it_examples.utils.nb_ui_utils import build_steering_scale_sweep_html
-from it_examples.utils.steering_demo_helpers import SteeringScalePoint
+from concept_displays import build_steering_scale_sweep_html
+from steering_demo_helpers import SteeringScalePoint
 
 
 def _point(arm: str, scale: float, pre: tuple[float, float], post: tuple[float, float]) -> SteeringScalePoint:

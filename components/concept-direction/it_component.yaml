@@ -1,6 +1,7 @@
 it_schema_version: 1
 kinds:
 - experiment
+- helpers
 requires:
   interpretune: '>=0.1.dev0'
   components:
@@ -16,6 +17,7 @@ experiments:
     - exp/analysis/concept_direction_analysis.py
     - exp/analysis/intervention_drift_analysis.py
     - concept_direction/concept_direction_template.ipynb
+    - concept_displays.py
     - exp/_experiment_hooks.py
     - exp/__init__.py
     - exp/analysis/__init__.py
@@ -30,6 +32,7 @@ experiments:
     - exp/analysis/concept_direction_analysis.py
     - exp/analysis/intervention_drift_analysis.py
     - concept_direction/concept_direction_template.ipynb
+    - concept_displays.py
     - exp/_experiment_hooks.py
     - exp/__init__.py
     - exp/analysis/__init__.py
@@ -44,6 +47,7 @@ experiments:
     - exp/analysis/concept_direction_analysis.py
     - exp/analysis/intervention_drift_analysis.py
     - concept_direction/concept_direction_template.ipynb
+    - concept_displays.py
     - exp/_experiment_hooks.py
     - exp/__init__.py
     - exp/analysis/__init__.py
@@ -58,6 +62,7 @@ experiments:
     - exp/analysis/concept_direction_analysis.py
     - exp/analysis/intervention_drift_analysis.py
     - concept_direction/concept_direction_template.ipynb
+    - concept_displays.py
     - exp/_experiment_hooks.py
     - exp/__init__.py
     - exp/analysis/__init__.py
@@ -72,6 +77,7 @@ experiments:
     - exp/analysis/concept_direction_analysis.py
     - exp/analysis/intervention_drift_analysis.py
     - concept_direction/concept_direction_template.ipynb
+    - concept_displays.py
     - exp/_experiment_hooks.py
     - exp/__init__.py
     - exp/analysis/__init__.py
@@ -86,6 +92,7 @@ experiments:
     - exp/analysis/concept_direction_analysis.py
     - exp/analysis/intervention_drift_analysis.py
     - concept_direction/concept_direction_template.ipynb
+    - concept_displays.py
     - exp/_experiment_hooks.py
     - exp/__init__.py
     - exp/analysis/__init__.py
@@ -100,6 +107,7 @@ experiments:
     - exp/analysis/concept_direction_analysis.py
     - exp/analysis/intervention_drift_analysis.py
     - concept_direction/concept_direction_template.ipynb
+    - concept_displays.py
     - exp/_experiment_hooks.py
     - exp/__init__.py
     - exp/analysis/__init__.py
@@ -120,6 +128,17 @@ experiments:
     - exp/__init__.py
     - exp/analysis/__init__.py
     - exp/_prompt_shim.py
-# Published beside the experiment payloads so the latent-dynamics stage table's CPU checks travel with the component.
+# What the concept-steering notebooks, the latent-dynamics notebook and the experiment template import.
+helpers:
+  modules:
+    concept_displays: concept_displays.py
+    steering_demo_helpers: steering_demo_helpers.py
+# Published beside the payloads so the component's CPU checks travel with it.
 extra_files:
+- tests/test_concept_displays.py
+- tests/test_jlens_direction_validation.py
 - tests/test_latent_dynamics_stages.py
+- tests/test_steering_demo_helpers.py
+- tests/test_steering_scale_sweep.py
+- tests/test_template_imports.py
+- tests/test_token_positions.py

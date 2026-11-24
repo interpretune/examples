@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from it_examples.utils.nb_ui_utils import build_jlens_direction_validation_html
+from concept_displays import build_jlens_direction_validation_html
 
 
 def _attribution() -> dict:

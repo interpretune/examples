@@ -1,0 +1,17 @@
+# interpretune component manifest (schema v1)
+# The helpers the neuron-communities replication notebook (arXiv 2611.23112) measures with. Nothing here builds a model:
+# each measurement takes a model and its model backend.
+it_schema_version: 1
+kinds:
+- helpers
+requires:
+  interpretune: '>=0.1.dev0'
+  adapters:
+  - nnsight
+  pip: []
+helpers:
+  modules:
+    neuron_communities_helpers: neuron_communities_helpers.py
+# Published beside the module so its CPU checks travel with the component.
+extra_files:
+- tests/test_neuron_communities_helpers.py

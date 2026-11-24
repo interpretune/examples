@@ -1,0 +1,17 @@
+# interpretune component manifest (schema v1)
+# The helpers the SASA blocks notebook (arXiv 2606.06333) measures with. Nothing here builds a model: each measurement
+# takes a model and its model backend.
+it_schema_version: 1
+kinds:
+- helpers
+requires:
+  interpretune: '>=0.1.dev0'
+  adapters:
+  - nnsight
+  pip: []
+helpers:
+  modules:
+    sasa_blocks_helpers: sasa_blocks_helpers.py
+# Published beside the module so its CPU checks travel with the component.
+extra_files:
+- tests/test_sasa_blocks_helpers.py

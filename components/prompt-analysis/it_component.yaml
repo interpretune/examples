@@ -5,6 +5,7 @@
 it_schema_version: 1
 kinds:
 - module
+- helpers
 requires:
   # dev floor until the alpha releases (PEP 440: 0.1.0.devN sorts BEFORE 0.1a0); tighten to '>=0.1a0' at release
   interpretune: '>=0.1.dev0'
@@ -33,3 +34,14 @@ module:
     prompt_analysis.gemma2.circuit_tracer+nnsight: configs/prompt_analysis.gemma2.circuit_tracer+nnsight.yaml
     prompt_analysis.gemma3.circuit_tracer+nnsight.neuronpedia: configs/prompt_analysis.gemma3.circuit_tracer+nnsight.neuronpedia.yaml
     prompt_analysis.llama3.nnsight: configs/prompt_analysis.llama3.nnsight.yaml
+# What the attention-attribution and attribution-analysis notebooks (and the latter's analysis points) import.
+helpers:
+  modules:
+    attention_attribution_helpers: attention_attribution_helpers.py
+    attribution_analysis_helpers: attribution_analysis_helpers.py
+    graph_analysis_helpers: graph_analysis_helpers.py
+# Published beside the modules so their CPU checks travel with the component.
+extra_files:
+- tests/test_attention_attribution_helpers.py
+- tests/test_attribution_analysis_helpers.py
+- tests/test_graph_analysis_helpers.py

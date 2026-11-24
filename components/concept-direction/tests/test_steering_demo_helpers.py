@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from interpretune.analysis.optools import UnembedNormInfo
-from it_examples.utils import steering_demo_helpers as helpers
+import steering_demo_helpers as helpers
 
 
 class _Tokenizer:

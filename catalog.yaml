@@ -34,9 +34,30 @@ components:
     smoke: tests/  # an op collection has no session configuration: its own CPU tests, run from the snapshot
     first_party: true
   - repo: speediedan/concept-direction
-    revision: 9ddcdb20972acc2793a15e9cf80805cfc4192b55
-    kinds: [experiment]
+    revision: 6c54baa93a99747dbe2e08b052a9ba31d2951cd6
+    kinds: [experiment, helpers]
     interpretune: '>=0.1.dev0'
     owner: speediedan
     smoke: tests/  # its experiments load Gemma 3 1B: its CPU stage-table tests, run from the snapshot
+    first_party: true
+  - repo: speediedan/prompt-analysis
+    revision: 6dd0dd5260bdd56a2c8cd7fb8a2c377554288034
+    kinds: [module, helpers]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: tests/  # its configurations load gated or GPU-sized models: its helpers' CPU tests, run from the snapshot
+    first_party: true
+  - repo: speediedan/neuron-communities
+    revision: 9176d38f345fcb6805e257ed9fdee377cafc0fd1
+    kinds: [helpers]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: tests/  # helper modules only: their CPU tests, run from the snapshot
+    first_party: true
+  - repo: speediedan/sasa-blocks
+    revision: 6f51af7ff5e59cb44c2e76f6f8efedb0641acdd6
+    kinds: [helpers]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: tests/  # helper modules only: their CPU tests, run from the snapshot
     first_party: true

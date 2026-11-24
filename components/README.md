@@ -20,6 +20,9 @@ defines what other components compose); the catalog check refuses an entry witho
 | `prompt-analysis/` | [`speediedan/prompt-analysis`](https://huggingface.co/speediedan/prompt-analysis) | `d221f0e9293888836a0101509546968eced813bd` |
 | `neuron-communities/` | `speediedan/neuron-communities` | not yet published |
 | `sasa-blocks/` | `speediedan/sasa-blocks` | not yet published |
+| `neuron-finder/` | `speediedan/neuron-finder` | not yet published |
+| `bsf-blocks/` | `speediedan/bsf-blocks` | not yet published |
+| `op-collection-demo/` | `speediedan/op-collection-demo` | not yet published |
 
 Both moved from interpretune's in-tree publish sources (`src/it_examples/examples/rte/` and
 `src/it_examples/examples/prompt_configs/`). `rte_boolq.py`, which until now existed only on the Hub, comes from the
@@ -35,9 +38,10 @@ are not built by `local_publish`, so the files here are the published files as t
 (`scripts/publish_op_collection.py`) and has diverged from it since. Its source is now the directory here, not that
 family.
 
-Four components carry the notebook helpers that serve one experiment (kind `helpers`, loaded with
-`it.hub.load_helpers`): `concept-direction`, `prompt-analysis`, `neuron-communities` and `sasa-blocks`. The helpers were
-copied from interpretune's `it_examples.utils`, and the notebooks import them from there until the components are
+Seven components carry the notebook helpers that serve one tutorial (kind `helpers`, loaded with
+`it.hub.load_helpers`): `concept-direction`, `prompt-analysis`, `neuron-communities`, `sasa-blocks`, `neuron-finder`,
+`bsf-blocks` and `op-collection-demo` (with the two collections its tutorial loads). The helpers were copied from
+interpretune's `it_examples`, and the notebooks import them from there until the components are
 published and the notebooks repoint (interpretune/interpretune#1148). Until then `concept-direction/` and
 `prompt-analysis/` hold more than their published revisions do.
 
@@ -45,8 +49,8 @@ A component with no CPU session configuration may name its own CPU tests as its 
 (`smoke: tests/`): `jlens_steering_ops` and `concept-direction` are listed that way. Their revisions above carry a test
 fix republished from interpretune/examples#12 (their earlier tests failed from a pulled snapshot); every other file is
 as first gathered. Not yet in `catalog.yaml`: `jspace-battery` (no CPU configuration and no CPU tests yet),
-`concept_direction_ops` (no tests of its own), and `prompt-analysis`, `neuron-communities` and `sasa-blocks`, whose CPU
-tests are not yet in a published revision.
+`concept_direction_ops` (no tests of its own), and the other components with helpers, whose CPU tests
+are not yet in a published revision.
 
 The components tier runs every component's tests the way a pull meets them (`scripts/run_component_tests.py
 --published-layout`: each file a symlink into a blob store, every cache empty), so a defect of that kind fails the

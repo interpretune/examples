@@ -38,8 +38,11 @@ def _published(component: Path, cache: Path) -> str:
 
 def test_the_re_homed_components_declare_helpers():
     assert {name for name, _ in _declared()} >= {
+        "bsf-blocks",
         "concept-direction",
         "neuron-communities",
+        "neuron-finder",
+        "op-collection-demo",
         "prompt-analysis",
         "sasa-blocks",
     }
@@ -71,3 +74,15 @@ def test_every_helper_module_in_the_source_is_declared(component):
 def test_every_test_in_the_source_is_published(component):
     shipped = set(_manifest(COMPONENTS / component).get("extra_files") or [])
     assert {f"tests/{p.name}" for p in (COMPONENTS / component).glob("tests/test_*.py")} <= shipped
+
+
+def test_a_declared_helper_finds_its_extra_files_beside_itself(tmp_path, monkeypatch):
+    """The op collections tutorial reads its demo collections from the pulled snapshot, next to the helper module."""
+    revision = _published(COMPONENTS / "op-collection-demo", tmp_path)
+    monkeypatch.setenv("IT_TRUST_REMOTE_CODE", "1")
+    demo = it.hub.load_helpers(
+        "local/op-collection-demo", "op_collection_demo_utils", revision=revision, cache_dir=tmp_path
+    )
+    beside = Path(demo.__file__).parent
+    assert (beside / "hub_op_collection" / "it_component.yaml").is_file()
+    assert (beside / "local_op_collection" / "local_op_collection.yaml").is_file()

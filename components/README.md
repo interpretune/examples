@@ -17,7 +17,7 @@ defines what other components compose); the catalog check refuses an entry witho
 | `concept_direction_ops/` | [`speediedan/concept_direction_ops`](https://huggingface.co/speediedan/concept_direction_ops) | `16affe3811eb8c5e601def07bd47b41ef4fcdf47` |
 | `jlens_steering_ops/` | [`speediedan/jlens_steering_ops`](https://huggingface.co/speediedan/jlens_steering_ops) | `22b03610f1a2eb4a8afc4957f17cf6a77e46ff87` |
 | `jspace-battery/` | [`speediedan/jspace-battery`](https://huggingface.co/speediedan/jspace-battery) | `8cac45ebf7e72f2a7b277f30371261cd336a522d` |
-| `prompt-analysis/` | [`speediedan/prompt-analysis`](https://huggingface.co/speediedan/prompt-analysis) | `d221f0e9293888836a0101509546968eced813bd` |
+| `prompt-analysis/` | [`speediedan/prompt-analysis`](https://huggingface.co/speediedan/prompt-analysis) | `ffaa0347be542794eb94dde50ece4f0b4ff2c541` |
 | `neuron-communities/` | `speediedan/neuron-communities` | not yet published |
 | `sasa-blocks/` | `speediedan/sasa-blocks` | not yet published |
 

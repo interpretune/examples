@@ -270,7 +270,8 @@ def test_the_shipped_config_resolves_to_the_default_table_and_valid_projection_s
     from exp.concept_direction import load_experiment_config
     from interpretune.utils.latent_state_projection import project_embeddings
 
-    root = Path(__file__).resolve().parents[1]
+    # absolute(), not resolve(): in a pulled snapshot this file is a symlink into the blob store
+    root = Path(__file__).absolute().parents[1]
     payload = load_experiment_config(root / LATENT_DYNAMICS_CONFIG)
     latent = payload["LATENT_DYNAMICS"]
     stages = stages_from_config(latent)

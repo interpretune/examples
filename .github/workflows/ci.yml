@@ -46,7 +46,7 @@ jobs:
           pick() { [ "${files}" = "ALL" ] || printf '%s\n' "${files}" | grep -qE "${shared}|$1"; }
           # tutorials consume the first-party components, so a component change runs the tutorials too
           pick '^(tutorials/|docs/notebook_artifacts/|scripts/notebook_docs_hooks\.py$|tests/tutorials/|components/)' && t=true || t=false
-          pick '^(components/|tests/components/)' && c=true || c=false
+          pick '^(components/|tests/components/|scripts/run_component_tests\.py$|scripts/catalog_smoke\.py$|scripts/check_catalog\.py$)' && c=true || c=false
           pick '^(dashboards/|tests/dashboards/)' && d=true || d=false
           pick '^(catalog\.yaml$|scripts/check_catalog\.py$|components/)' && k=true || k=false
           printf 'tutorials=%s\ncomponents=%s\ndashboards=%s\ncatalog=%s\n' "$t" "$c" "$d" "$k" | tee -a "${GITHUB_OUTPUT}"
@@ -98,6 +98,9 @@ jobs:
           fi
           nbpress-publish --check-only
           nbpress-render --check-stale
+      - name: Each component's own tests, from a Hub-shaped snapshot with empty caches, one process per component
+        if: env.TIER_SELECTED == 'true' && matrix.tier == 'components'
+        run: python scripts/run_component_tests.py --published-layout
       - name: Run the tier's tests
         if: env.TIER_SELECTED == 'true'
         run: |

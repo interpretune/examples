@@ -64,7 +64,7 @@
   "tutorials/dev/circuit_tracer_examples/ct_analysis_backend_demo.ipynb": "e9078a892931c3180ae7eca2226bb3c1db1ee7966c0d4bb59462f41500c1c213",
   "tutorials/dev/circuit_tracer_examples/ct_concept_steering_demo.ipynb": "3be66d806ae0307f3d6be425e12d1f9892e4393110b8cc10a87e18e1ebecd463",
   "tutorials/dev/circuit_tracer_examples/ct_concept_steering_demo_local_np.ipynb": "ae5551fcf2b6f699aed73c31d28a7b31138fa695f58635de99019eab29c2ae99",
-  "tutorials/dev/circuit_tracer_examples/jspace_workspace_demo.ipynb": "3ced0bc06976dcd15f7578ffa93da871a646860e31984c0ab072e9948d1e69e8",
+  "tutorials/dev/circuit_tracer_examples/jspace_workspace_demo.ipynb": "e67476a640e40357b4d1f84b73b671813863ee4cb23ed3536d23f610979dc0da",
   "tutorials/dev/example_op_collections/bundled_ops_hub_optin.ipynb": "cd24d46c31d362cfa1a04b4f2f74a278c04a8f55f8f5aa13fa4c2d68036686e4",
   "tutorials/dev/example_op_collections/hub_op_collection/hub_op_collection.yaml": "c9afc68ee32514a3b7efca39f5ba9f58848242af849f4789a4f6e0e6864a3f92",
   "tutorials/dev/example_op_collections/hub_op_collection/hub_op_definitions.py": "a46bbe04bd8f610ed19f673b8d35517615f8a391fb24043c6e4cac4b567eb9ca",

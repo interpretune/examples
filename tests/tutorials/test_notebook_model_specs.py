@@ -1,6 +1,7 @@
-"""The J-space tutorial brings its own model specs: every selection it documents or is tested with resolves there.
+"""The tutorials bring their own model specs: a table in the notebook, or the file its component ships.
 
-The notebook itself needs a GPU, so a selection missing from its table would otherwise surface only in a GPU run.
+These notebooks need a GPU, so a selection missing from a table, or a call that falls back to the specs bundled with
+interpretune, would otherwise surface only in a GPU run.
 """
 
 from __future__ import annotations
@@ -13,13 +14,13 @@ import pytest
 
 from interpretune.harness.sessions import resolve_model_spec
 
-NOTEBOOK = (
-    Path(__file__).parents[2] / "tutorials" / "publish" / "circuit_tracer_examples" / "jspace_workspace_demo.ipynb"
-)
+NOTEBOOKS = Path(__file__).parents[2] / "tutorials" / "publish" / "circuit_tracer_examples"
+NOTEBOOK = NOTEBOOKS / "jspace_workspace_demo.ipynb"
+LATENT_DYNAMICS = NOTEBOOKS / "concept_direction_latent_dynamics.ipynb"
 
 
-def _code() -> list[str]:
-    cells = json.loads(NOTEBOOK.read_text(encoding="utf-8"))["cells"]
+def _code(notebook: Path = NOTEBOOK) -> list[str]:
+    cells = json.loads(notebook.read_text(encoding="utf-8"))["cells"]
     return ["".join(cell["source"]) for cell in cells if cell["cell_type"] == "code"]
 
 
@@ -64,3 +65,15 @@ def test_the_session_uses_the_notebooks_own_specs():
     ]
     assert len(calls) == 1
     assert {kw.arg: getattr(kw.value, "id", None) for kw in calls[0].keywords}["model_specs"] == "MODEL_SPECS"
+
+
+def test_the_latent_dynamics_tutorial_resolves_from_the_component_it_pulled():
+    calls = [
+        node
+        for source in _code(LATENT_DYNAMICS)
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "resolve_model_spec"
+    ]
+    assert len(calls) == 1
+    keywords = {kw.arg: ast.unparse(kw.value) for kw in calls[0].keywords}
+    assert keywords == {"model_specs": "snapshot_dir / 'model_specs.yaml'"}

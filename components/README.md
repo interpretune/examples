@@ -35,11 +35,10 @@ are not built by `local_publish`, so the files here are the published files as t
 (`scripts/publish_op_collection.py`) and has diverged from it since. Its source is now the directory here, not that
 family.
 
-Four components carry the notebook helpers that serve one experiment (kind `helpers`, loaded with
-`it.hub.load_helpers`): `concept-direction`, `prompt-analysis`, `neuron-communities` and `sasa-blocks`. The helpers were
-copied from interpretune's `it_examples.utils`, and the notebooks import them from there until the components are
-published and the notebooks repoint (interpretune/interpretune#1148). All four are published at the revisions above,
-which is the first published state of each helper module.
+Four components carry the notebook helpers that serve one experiment (kind `helpers`): `concept-direction`,
+`prompt-analysis`, `neuron-communities` and `sasa-blocks`. The tutorials load them with `it.hub.load_helpers` at the
+revision each one pins in its parameters cell, after `it.hub.pull` fetches it and the notebook opts in to running it. A
+tutorial's pin moves only with a re-render, so it may trail the table above.
 
 A component with no CPU session configuration may name its own CPU tests as its smoke, run from the published snapshot
 (`smoke: tests/`): `jlens_steering_ops`, `concept-direction`, `prompt-analysis`, `neuron-communities` and `sasa-blocks`

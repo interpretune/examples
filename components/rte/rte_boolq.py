@@ -415,6 +415,111 @@ class RTEBoolqModuleMixin:
 class RTEBoolqModule(RTEBoolqSteps, RTEBoolqModuleMixin, torch.nn.Module): ...
 
 
+# -- latent tuning of a model too large for one card, sharded with FSDP2 (interpretune#882) --------------------------
+#
+# The large-model recipe of interpretune#880 as configuration: LoRA on the first blocks, then the decoders of Gemma
+# Scope 2 transcoders spliced over two blocks' MLPs, on a Gemma 3 built on the meta device and sharded with FSDP2
+# (`runs/rte_latent.gemma3_4b.core.fsdp2.yaml`, `runs/rte_latent.gemma3_27b.core.fsdp2.yaml`). The plan, the offload and
+# the mixed precision policy are the run's; only the transcoders need code, because they are attached beside the model.
+
+
+@dataclass(kw_only=True)
+class RTEBoolqLatentCfg:
+    """A module configuration mixin carrying the spliced transcoders' settings (``latent_tuning``).
+
+    Keys: ``layers`` (the decoder layers whose MLPs a transcoder replaces) and ``transcoders``, either a published
+    Gemma Scope 2 set (``{"repo": ..., "variant": ...}``) or ``{"random": {"d_transcoder": n, "seed": s}}`` for tests.
+    """
+
+    latent_tuning: dict[str, Any] = field(default_factory=dict)
+
+
+class GemmaScopeTranscoder(torch.nn.Module):
+    """A Gemma Scope 2 JumpReLU transcoder (``params.safetensors``), from the pre-feedforward-norm output $x$:
+
+    - $a = (x W_{enc} + b_{enc}) \\odot [x W_{enc} + b_{enc} \\gt \\theta]$ are the latents;
+    - $\\hat y = a W_{dec} + b_{dec} + x A$ predicts the post-feedforward-norm output, with $A$ the affine skip.
+
+    The weights are held in fp32 whatever the model's dtype, and each call computes in fp32. ``encode`` and ``decode`` go
+    through ``forward`` because FSDP2 gathers a unit's weights in its forward hooks, and interpretune's FSDP2 memory
+    profiling instruments only those.
+    """
+
+    NAMES = ("w_enc", "b_enc", "threshold", "w_dec", "b_dec", "affine_skip_connection")
+
+    def __init__(self, weights: dict[str, torch.Tensor]) -> None:
+        super().__init__()
+        for name in self.NAMES:
+            setattr(self, name, torch.nn.Parameter(weights[name].float(), requires_grad=False))
+        self._skip: torch.Tensor | None = None
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        return self(x=x)
+
+    def decode(self, z: torch.Tensor) -> torch.Tensor:
+        return self(z=z)
+
+    def forward(self, x: torch.Tensor | None = None, z: torch.Tensor | None = None) -> torch.Tensor:
+        if x is not None:
+            x = x.to(self.w_enc.dtype)
+            self._skip = x @ self.affine_skip_connection
+            pre = x @ self.w_enc + self.b_enc
+            return pre * (pre > self.threshold)
+        skip, self._skip = self._skip, None
+        return z @ self.w_dec + self.b_dec + skip
+
+
+def load_latent_transcoder(layer: int, d_model: int, spec: dict[str, Any]) -> GemmaScopeTranscoder:
+    """``layer``'s transcoder, on the CPU: a published one, or a random one of the same shape."""
+    if "random" in spec:
+        d_tc = int(spec["random"]["d_transcoder"])
+        gen = torch.Generator().manual_seed(int(spec["random"].get("seed", 0)) + layer)
+        weights = {
+            "w_enc": torch.randn(d_model, d_tc, generator=gen) / d_model**0.5,
+            "b_enc": torch.zeros(d_tc),
+            "threshold": torch.zeros(d_tc),
+            "w_dec": torch.randn(d_tc, d_model, generator=gen) / d_tc**0.5,
+            "b_dec": torch.zeros(d_model),
+            "affine_skip_connection": torch.zeros(d_model, d_model),
+        }
+        return GemmaScopeTranscoder(weights)
+    from huggingface_hub import hf_hub_download
+    from safetensors.torch import load_file
+
+    filename = f"transcoder_all/layer_{layer}_{spec['variant']}/params.safetensors"
+    return GemmaScopeTranscoder(load_file(hf_hub_download(spec["repo"], filename)))
+
+
+class RTEBoolqLatentMixin:
+    """Splices the configured transcoders over their layers' MLPs, as latent models ``tc<layer>``.
+
+    Each replaces the output of its block's MLP (the post-feedforward norm's output, as the set was trained) with its
+    reconstruction, so the model runs on what the latents capture. A schedule selects them by role (``role:latent``) or
+    by name (``latent_models.tc<layer>.<weight>``).
+    """
+
+    def register_tunable_modules(self) -> None:
+        from interpretune.tuning.latents import LatentSite, attach_latent_model
+
+        super().register_tunable_modules()
+        cfg = getattr(self.it_cfg, "latent_tuning", None) or {}
+        if not cfg.get("layers"):
+            raise ValueError("`latent_tuning` names no `layers` to splice a transcoder at")
+        stacks = [n for n, m in self.named_modules() if n.endswith("language_model") and hasattr(m, "layers")]
+        if len(stacks) != 1:
+            raise ValueError(f"expected one Gemma 3 text model to splice transcoders into, found {stacks}")
+        d_model = self.model.config.get_text_config().hidden_size
+        for layer in cfg["layers"]:
+            block = f"{stacks[0]}.layers.{layer}"
+            site = LatentSite(
+                f"{block}.mlp", write=f"{block}.post_feedforward_layernorm", read_from="input", op="replace"
+            )
+            attach_latent_model(self, f"tc{layer}", load_latent_transcoder(layer, d_model, cfg["transcoders"]), site)
+
+
+class RTEBoolqLatentModule(RTEBoolqLatentMixin, RTEBoolqSteps, RTEBoolqModuleMixin, torch.nn.Module): ...
+
+
 # -- the sparsity chain (interpretune#698 to #700) as one phased run (interpretune#899) ------------------------------
 #
 # Phase 0 tunes the final norm and blocks 14-25 of gemma-3-1b-it against a two-way cross-entropy on the Yes/No logits

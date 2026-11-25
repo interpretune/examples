@@ -11,9 +11,9 @@ defines what other components compose); the catalog check refuses an entry witho
 
 | directory | Hub repository | published revision |
 | --- | --- | --- |
-| `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `834a448741b2d092372d97f481d8aa10d609a615` |
+| `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `297d5bbd914326545e608ddc4ce191884355211e` |
 | `prompt-configs/` | [`speediedan/prompt-configs`](https://huggingface.co/speediedan/prompt-configs) | `3d8b9710061283dd14c86a46f0c0649b5e262db0` |
-| `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `6c54baa93a99747dbe2e08b052a9ba31d2951cd6` |
+| `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `918410d125ff1a9006ba08de80bc9c4bbe25f608` |
 | `concept_direction_ops/` | [`speediedan/concept_direction_ops`](https://huggingface.co/speediedan/concept_direction_ops) | `16affe3811eb8c5e601def07bd47b41ef4fcdf47` |
 | `jlens_steering_ops/` | [`speediedan/jlens_steering_ops`](https://huggingface.co/speediedan/jlens_steering_ops) | `22b03610f1a2eb4a8afc4957f17cf6a77e46ff87` |
 | `jspace-battery/` | [`speediedan/jspace-battery`](https://huggingface.co/speediedan/jspace-battery) | `8cac45ebf7e72f2a7b277f30371261cd336a522d` |
@@ -35,11 +35,10 @@ are not built by `local_publish`, so the files here are the published files as t
 (`scripts/publish_op_collection.py`) and has diverged from it since. Its source is now the directory here, not that
 family.
 
-Four components carry the notebook helpers that serve one experiment (kind `helpers`, loaded with
-`it.hub.load_helpers`): `concept-direction`, `prompt-analysis`, `neuron-communities` and `sasa-blocks`. The helpers were
-copied from interpretune's `it_examples.utils`, and the notebooks import them from there until the components are
-published and the notebooks repoint (interpretune/interpretune#1148). All four are published at the revisions above,
-which is the first published state of each helper module.
+Four components carry the notebook helpers that serve one experiment (kind `helpers`): `concept-direction`,
+`prompt-analysis`, `neuron-communities` and `sasa-blocks`. The tutorials load them with `it.hub.load_helpers` at the
+revision each one pins in its parameters cell, after `it.hub.pull` fetches it and the notebook opts in to running it. A
+tutorial's pin moves only with a re-render, so it may trail the table above.
 
 A component with no CPU session configuration may name its own CPU tests as its smoke, run from the published snapshot
 (`smoke: tests/`): `jlens_steering_ops`, `concept-direction`, `prompt-analysis`, `neuron-communities` and `sasa-blocks`

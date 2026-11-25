@@ -186,8 +186,7 @@ class RTEBoolqDataModule(ITDataModule):
             dataset[split] = dataset[split].map(tokenization_func, **self.itdm_cfg.prepare_data_map_cfg)
             dataset[split] = self._remove_unused_columns(dataset[split], target_model)
 
-        save_path = Path(self.itdm_cfg.dataset_path)
-        dataset.save_to_disk(save_path)
+        self.save_prepared_dataset(dataset)
 
     def dataloader_factory(self, split: str, use_train_batch_size: bool = False) -> DataLoader:
         dataloader_kwargs = {
@@ -608,7 +607,7 @@ class RTEBoolqChainDataModule(RTEBoolqDataModule):
         for split in dataset.keys():
             dataset[split] = dataset[split].map(encode, **self.itdm_cfg.prepare_data_map_cfg)
             dataset[split] = self._remove_unused_columns(dataset[split], target_model)
-        dataset.save_to_disk(Path(self.itdm_cfg.dataset_path))
+        self.save_prepared_dataset(dataset)
 
     @staticmethod
     def encode_for_chain(

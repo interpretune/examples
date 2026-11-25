@@ -1,0 +1,50 @@
+# Latent tuning of gemma-3-27b-it on RTE in two stages (LoRA adapters, then the spliced transcoders' decoders),
+# sharded with FSDP2 on two ranks and built on the meta device, on interpretune's core loop (interpretune#882):
+#
+#   torchrun --standalone --nproc-per-node 2 --no-python interpretune --run_command train \
+#     --config hub://speediedan/rte/runs/rte_latent.gemma3_27b.core.fsdp2.yaml
+#
+# Shaped for two 32 GB cards. Pinned shards need `PYTORCH_ALLOC_CONF=pinned_max_round_threshold_mb:0` in the launch
+# environment, without which the host allocator can round each one up to twice its size.
+#
+# The plan: each decoder layer is a unit, checkpointed so that its activations are recomputed rather than kept; each
+# spliced transcoder is its own, gathered only where it is read; the vision tower's layers are units too, so the unused
+# tower stays sharded. Every unit's shards live in host memory (`cpu_offload_policy`). `mp_policy` names no
+# `param_dtype`, so each tensor computes in the dtype it is stored in (a bf16 base with fp32 adapters and transcoders),
+# and gradients are reduced in fp32.
+#
+# `meta_init` builds the model without weights on every rank, and rank 0 also loads the checkpoint on its CPU, which the
+# placement loads each rank's shards from. (`meta_init_load: dcp`, which needs no whole copy, cannot initialize LoRA
+# adapters.)
+#
+# Each rank's batch is 2, so the global batch is 4. No checkpoint is kept.
+session_ref: speediedan/rte:rte_latent.gemma3.core.fsdp2
+seed_everything: 0
+shared_config:
+  model_name_or_path: google/gemma-3-27b-it
+registered_cfg:
+  module_cfg:
+    init_args:
+      latent_tuning:
+        layers: [31, 40]
+        transcoders:
+          repo: google/gemma-scope-2-27b-it
+      hf_from_pretrained_cfg:
+        init_args:
+          meta_init: true
+run_cfg:
+  placement: fsdp2
+  fsdp_plan:
+    class:Gemma3DecoderLayer: {act_ckpt: composable}
+    class:SiglipEncoderLayer: {}
+    class:GemmaScopeTranscoder: {}
+  fsdp_default_kwargs:
+    cpu_offload_policy: {pin_memory: true}
+    mp_policy: {reduce_dtype: float32}
+  max_epochs: 2
+  limit_train_batches: 64
+  limit_val_batches: 16
+  callbacks:
+    - class_path: interpretune.tuning.core_loop.FTSCoreCallback
+      init_args:
+        schedule: hub://speediedan/rte/ft_schedules/rte_latent.gemma3.yaml

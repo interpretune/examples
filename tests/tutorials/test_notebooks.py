@@ -906,6 +906,57 @@ def test_role_kinds_tuning_notebook(tmp_path: Path):
     _cleanup_notebook_artifacts()
 
 
+# Trains on the train split, whose arrow read fails on Windows runners (as for the role kinds notebook above).
+@RunIf(skip_windows=True)
+@pytest.mark.hf_live
+@pytest.mark.skipif(
+    not (os.environ.get("IT_HF_TOKEN") or os.environ.get("HF_TOKEN")),
+    reason="IT_HF_TOKEN or HF_TOKEN required to fetch the interp-engine adapter component",
+)
+def test_interp_engine_tuning_notebook(tmp_path: Path):
+    """One address schedule on ``(core,)`` and on the Hub-delivered ``(core, interp_engine)`` (interpretune#812).
+
+    CPU-only, against the local-publish rte snapshot; the adapter is pulled from the Hub at the notebook's pinned
+    revision. The notebook asserts each stage's thaw and the two runs' parity itself; this checks it ran clean and
+    reached the parity table.
+    """
+    pytest.importorskip("interp_engine", reason="the `examples` extra installs interp-engine")
+    from interpretune.hub.components import local_publish
+
+    from tests.support.rte_component import rte_entrypoint_src
+
+    rev = local_publish(RTE_COMPONENT_DIR, "speediedan/rte", entrypoint_src=rte_entrypoint_src())
+    output_dir = tmp_path / "notebook_outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_notebook = execute_notebook_with_params(
+        notebook_path=NOTEBOOKS_DIR / "tuning" / "interp_engine_tuning.ipynb",
+        parameters={"LIMIT_TRAIN_BATCHES": 2, "LIMIT_VAL_BATCHES": 1, "REVISION": rev},
+        output_dir=output_dir,
+    )
+
+    import nbformat
+
+    with open(output_notebook) as f:
+        nb = nbformat.read(f, as_version=4)
+    errors = [
+        output.get("ename", "") + ": " + output.get("evalue", "")
+        for cell in nb.cells
+        if cell.cell_type == "code"
+        for output in cell.get("outputs", [])
+        if output.output_type == "error"
+    ]
+    assert not errors, f"error outputs in executed notebook: {errors}"
+    html = "".join(
+        "".join(o.get("data", {}).get("text/html", ""))
+        for cell in nb.cells
+        if cell.cell_type == "code"
+        for o in cell.get("outputs", [])
+    )
+    assert "Parity between the two compositions" in html and "InterpEngineModule" in html
+
+    _cleanup_notebook_artifacts()
+
+
 # The train-split arrow read fails on Windows runners (OSError 22 on mmap) while test-split
 # paths pass there; the demo needs the train split for its fit leg, so it skips Windows.
 @RunIf(skip_windows=True)
@@ -1145,6 +1196,7 @@ def test_notebook_discovery():
         "sasa_blocks/sasa_blocks_frames_charts.ipynb",
         "saelens_adapter_example/saelens_adapter_example.ipynb",
         "shared_analysis/shared_analysis_roundtrip.ipynb",
+        "tuning/interp_engine_tuning.ipynb",
         "tuning/role_kinds_tuning.ipynb",
     }
 

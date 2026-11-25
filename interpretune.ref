@@ -2,4 +2,4 @@
 # supported flow (the `examples` and `lightning` extras, the `git-deps` and `test` groups); the scheduled run also
 # tests against interpretune `main`, and the bump workflow opens a pull request that moves this pin. It becomes a
 # release version once interpretune publishes one that carries what the tutorials use.
-0cd95d63928811c3f9592cc88f57ab3413de1218
+929ddb9bfd87785c42bcad701100a0a56ade8844

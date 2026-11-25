@@ -20,7 +20,7 @@ shared_config:
   os_env_model_auth_key: HF_GATED_PUBLIC_REPO_AUTH_KEY
   model_name_or_path: google/gemma-2-2b
   tokenizer_kwargs:
-      model_input_names: ['input']
+      model_input_names: ['input', 'attention_mask']
       padding_side: left
       add_bos_token: true
 registered_cfg:
@@ -29,7 +29,7 @@ registered_cfg:
       class_path: prompt_analysis.PromptSetConfig
       init_args:
         prompts: ['The capital of the state containing Dallas is']
-    signature_columns: ['input']
+    signature_columns: ['input', 'attention_mask']
     enable_datasets_cache: False
     eval_batch_size: 1
   module_cfg:

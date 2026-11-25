@@ -5,7 +5,7 @@ kinds:
 requires:
   interpretune: '>=0.1.dev0'
   components:
-  - speediedan/rte@738e41229e39379c432da4e5830af01d6e8960b2
+  - speediedan/prompt-configs@3d8b9710061283dd14c86a46f0c0649b5e262db0
 experiments:
   gemma3_1b_it_local_color_fruit_orange:
     config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange.yaml
@@ -22,6 +22,7 @@ experiments:
     - exp/__init__.py
     - exp/analysis/__init__.py
     - exp/_prompt_shim.py
+    - model_specs.yaml
   gemma3_1b_it_local_color_fruit_orange_fs_l10_n5:
     config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5.yaml
     pipeline: exp/concept_direction.py
@@ -37,6 +38,7 @@ experiments:
     - exp/__init__.py
     - exp/analysis/__init__.py
     - exp/_prompt_shim.py
+    - model_specs.yaml
   gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_answer_basis:
     config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_answer_basis.yaml
     pipeline: exp/concept_direction.py
@@ -52,6 +54,7 @@ experiments:
     - exp/__init__.py
     - exp/analysis/__init__.py
     - exp/_prompt_shim.py
+    - model_specs.yaml
   gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5:
     config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5.yaml
     pipeline: exp/concept_direction.py
@@ -67,6 +70,7 @@ experiments:
     - exp/__init__.py
     - exp/analysis/__init__.py
     - exp/_prompt_shim.py
+    - model_specs.yaml
   gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5_any:
     config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5_any.yaml
     pipeline: exp/concept_direction.py
@@ -82,6 +86,7 @@ experiments:
     - exp/__init__.py
     - exp/analysis/__init__.py
     - exp/_prompt_shim.py
+    - model_specs.yaml
   gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5_pos_noact_constrained:
     config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_fs_l10_n5_s5_pos_noact_constrained.yaml
     pipeline: exp/concept_direction.py
@@ -97,6 +102,7 @@ experiments:
     - exp/__init__.py
     - exp/analysis/__init__.py
     - exp/_prompt_shim.py
+    - model_specs.yaml
   gemma3_1b_it_local_color_fruit_orange_signed_fs_l10_n5:
     config: concept_direction/configs/gemma3_1b_it_local_color_fruit_orange_signed_fs_l10_n5.yaml
     pipeline: exp/concept_direction.py
@@ -112,6 +118,7 @@ experiments:
     - exp/__init__.py
     - exp/analysis/__init__.py
     - exp/_prompt_shim.py
+    - model_specs.yaml
   gemma3_1b_it_local_latent_dynamics_color_fruit_orange_fs_l10_n5:
     config: concept_direction/configs/gemma3_1b_it_local_latent_dynamics_color_fruit_orange_fs_l10_n5.yaml
     pipeline: exp/concept_direction.py
@@ -128,6 +135,7 @@ experiments:
     - exp/__init__.py
     - exp/analysis/__init__.py
     - exp/_prompt_shim.py
+    - model_specs.yaml
 # What the concept-steering notebooks, the latent-dynamics notebook and the experiment template import.
 helpers:
   modules:
@@ -138,6 +146,8 @@ extra_files:
 - tests/test_concept_displays.py
 - tests/test_jlens_direction_validation.py
 - tests/test_latent_dynamics_stages.py
+- tests/test_component_requirements.py
+- tests/test_model_specs.py
 - tests/test_steering_demo_helpers.py
 - tests/test_steering_scale_sweep.py
 - tests/test_template_imports.py

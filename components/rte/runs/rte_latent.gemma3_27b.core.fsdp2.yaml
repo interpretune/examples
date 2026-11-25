@@ -4,7 +4,7 @@
 #   torchrun --standalone --nproc-per-node 2 --no-python interpretune --run_command train \
 #     --config hub://speediedan/rte/runs/rte_latent.gemma3_27b.core.fsdp2.yaml
 #
-# Shaped for two 32 GB cards. Pinned shards need `PYTORCH_ALLOC_CONF=pinned_max_round_threshold_mb:0` in the launch
+# Shaped for two 32 GB cards, and not yet launched: only the 4B run has been. Pinned shards need `PYTORCH_ALLOC_CONF=pinned_max_round_threshold_mb:0` in the launch
 # environment, without which the host allocator can round each one up to twice its size.
 #
 # The plan: each decoder layer is a unit, checkpointed so that its activations are recomputed rather than kept; each

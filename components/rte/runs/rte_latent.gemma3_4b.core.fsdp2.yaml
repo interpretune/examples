@@ -4,7 +4,9 @@
 #   torchrun --standalone --nproc-per-node 2 --no-python interpretune --run_command train \
 #     --config hub://speediedan/rte/runs/rte_latent.gemma3_4b.core.fsdp2.yaml
 #
-# Shaped for two cards of unequal size, as the component's circuit-tracer FSDP2 run is (24 GB and 8 GB).
+# Run on two cards of unequal size (24 GB and 8 GB), with eight steps in each stage, it peaked at 2.8 GiB allocated on
+# each card and took about 5 seconds a step. That was with `PYTORCH_ALLOC_CONF=pinned_max_round_threshold_mb:0` in the
+# launch environment, without which the host allocator can round each pinned shard up to twice its size.
 #
 # The plan: each decoder layer is a unit, checkpointed so that its activations are recomputed rather than kept; each
 # spliced transcoder is its own, gathered only where it is read; the vision tower's layers are units too, so the unused

@@ -6,6 +6,7 @@ from typing import Any
 
 import torch
 
+import interpretune as it
 from interpretune.analysis.injection.analysis_hook_patcher import HOOK_REGISTRY, get_analysis_vars
 from interpretune.analysis.injection.orchestrator import (
     analysis_log_point,
@@ -13,8 +14,16 @@ from interpretune.analysis.injection.orchestrator import (
     format_per_token,
     get_caller_context,
 )
-from it_examples.utils.example_helpers import collect_shapes
-from it_examples.utils.graph_analysis_helpers import get_topk_2nd_order_adjacency
+
+# The notebook has fetched the component and opted in to running it before the orchestrator imports this module. The
+# revision is the notebook's `PROMPT_ANALYSIS_REVISION` (tests/tutorials/test_component_pins.py keeps the two equal).
+PROMPT_ANALYSIS_REVISION = "6dd0dd5260bdd56a2c8cd7fb8a2c377554288034"
+collect_shapes = it.hub.load_helpers(
+    "speediedan/prompt-analysis", "attribution_analysis_helpers", revision=PROMPT_ANALYSIS_REVISION
+).collect_shapes
+get_topk_2nd_order_adjacency = it.hub.load_helpers(
+    "speediedan/prompt-analysis", "graph_analysis_helpers", revision=PROMPT_ANALYSIS_REVISION
+).get_topk_2nd_order_adjacency
 
 # because we use analysis injection helper functions (get_analysis_vars) to update our local analysis point state:
 # pyright: reportUndefinedVariable=false

@@ -33,6 +33,9 @@ module:
       rte_ft:
         description: phased fine-tuning with finetuning-scheduler, on the core loop or Lightning, and with one schedule
           written in venngram addresses on the core/HF, TransformerLens and nnsight compositions (runs/)
+      rte_latent:
+        description: LoRA and spliced-transcoder tuning of gemma-3 4B and 27B in two stages, built on the meta device and
+          sharded with FSDP2 on two ranks, on the core loop (runs/)
       rte_sparse:
         description: the sparsity chain (interpretune#698 to #700) as one phased run on the core loop (runs/)
   configs:
@@ -50,6 +53,7 @@ module:
     rte_ft.gpt2.nnsight: configs/rte_ft.gpt2.nnsight.yaml
     rte_ft.gpt2.transformer_lens: configs/rte_ft.gpt2.transformer_lens.yaml
     rte_ft.qwen3.core: configs/rte_ft.qwen3.core.yaml
+    rte_latent.gemma3.core.fsdp2: configs/rte_latent.gemma3.core.fsdp2.yaml
     rte_sparse.gemma3.core: configs/rte_sparse.gemma3.core.yaml
     rte_sparse.gpt2.core: configs/rte_sparse.gpt2.core.yaml
 datamodules:

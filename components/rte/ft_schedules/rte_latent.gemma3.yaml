@@ -1,0 +1,11 @@
+# Two stages for the latent tuning runs of gemma-3 (interpretune#882). Stage 0 tunes the LoRA adapters, every base weight
+# and transcoder frozen. Stage 1 also thaws the spliced transcoders' decoders, by name: their encoders, thresholds and
+# affine skips stay as published. `max_transition_epoch` ends stage 0 after its first epoch, so a two-epoch run trains
+# one epoch in each stage.
+0:
+  params:
+  - role:adapter
+  max_transition_epoch: 1
+1:
+  params:
+  - latent_models\.tc\d+\.(w_dec|b_dec)

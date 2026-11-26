@@ -10,13 +10,10 @@ import pytest
 
 DEV = Path(__file__).resolve().parents[2] / "tutorials" / "dev"
 
-# These still import interpretune's in-tree `it_examples`: three use helper modules whose components are not published
-# yet, and interp_engine_hub_adapter waits for a host with the memory to re-render it.
+# This one still imports interpretune's in-tree `it_examples`: interp_engine_hub_adapter waits for a host with the
+# memory to re-render it.
 NOT_YET_REPOINTED = {
-    "bsf_blocks/bsf_blocks.ipynb",
-    "example_op_collections/op_collection_example.ipynb",
     "interp_engine_example/interp_engine_hub_adapter.ipynb",
-    "neuron_finder/neuron_finder.ipynb",
 }
 
 

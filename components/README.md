@@ -11,7 +11,7 @@ defines what other components compose); the catalog check refuses an entry witho
 
 | directory | Hub repository | published revision |
 | --- | --- | --- |
-| `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `4e58126454837a6572b13c9d53c1af15e0605478` |
+| `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `fba0afcff43e09a1882aadd767720195880d0755` |
 | `prompt-configs/` | [`speediedan/prompt-configs`](https://huggingface.co/speediedan/prompt-configs) | `3d8b9710061283dd14c86a46f0c0649b5e262db0` |
 | `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `618a73abae788f91c4f2a8548d230cbec5d645cb` |
 | `concept_direction_ops/` | [`speediedan/concept_direction_ops`](https://huggingface.co/speediedan/concept_direction_ops) | `16affe3811eb8c5e601def07bd47b41ef4fcdf47` |

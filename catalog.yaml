@@ -34,7 +34,7 @@ components:
     smoke: tests/  # an op collection has no session configuration: its own CPU tests, run from the snapshot
     first_party: true
   - repo: speediedan/concept-direction
-    revision: 918410d125ff1a9006ba08de80bc9c4bbe25f608
+    revision: 736e2ca563102fdaaa1c286eefb3ac4bfa6f85a2
     kinds: [experiment, helpers]
     interpretune: '>=0.1.dev0'
     owner: speediedan

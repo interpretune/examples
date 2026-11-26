@@ -1,0 +1,21 @@
+# interpretune component manifest (schema v1)
+# The op collections tutorial's helpers, with the two demo collections it loads: one it uses locally, and one it
+# publishes and pulls back. The tutorial reads both from the pulled snapshot, beside the helper module.
+it_schema_version: 1
+kinds:
+- helpers
+requires:
+  interpretune: '>=0.1.dev0'
+  adapters: []
+  pip: []
+helpers:
+  modules:
+    op_collection_demo_utils: op_collection_demo_utils.py
+extra_files:
+- hub_op_collection/hub_op_collection.yaml
+- hub_op_collection/hub_op_definitions.py
+- hub_op_collection/it_component.yaml
+- local_op_collection/local_op_collection.yaml
+- local_op_collection/local_op_definitions.py
+# Published beside the module so its CPU checks travel with the component.
+- tests/test_op_collection_demo_utils.py

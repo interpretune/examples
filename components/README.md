@@ -20,6 +20,9 @@ defines what other components compose); the catalog check refuses an entry witho
 | `prompt-analysis/` | [`speediedan/prompt-analysis`](https://huggingface.co/speediedan/prompt-analysis) | `6dd0dd5260bdd56a2c8cd7fb8a2c377554288034` |
 | `neuron-communities/` | [`speediedan/neuron-communities`](https://huggingface.co/speediedan/neuron-communities) | `9176d38f345fcb6805e257ed9fdee377cafc0fd1` |
 | `sasa-blocks/` | [`speediedan/sasa-blocks`](https://huggingface.co/speediedan/sasa-blocks) | `6f51af7ff5e59cb44c2e76f6f8efedb0641acdd6` |
+| `neuron-finder/` | `speediedan/neuron-finder` | not yet published |
+| `bsf-blocks/` | `speediedan/bsf-blocks` | not yet published |
+| `op-collection-demo/` | `speediedan/op-collection-demo` | not yet published |
 
 Both moved from interpretune's in-tree publish sources (`src/it_examples/examples/rte/` and
 `src/it_examples/examples/prompt_configs/`). `rte_boolq.py`, which until now existed only on the Hub, comes from the
@@ -40,11 +43,16 @@ Four components carry the notebook helpers that serve one experiment (kind `help
 revision each one pins in its parameters cell, after `it.hub.pull` fetches it and the notebook opts in to running it. A
 tutorial's pin moves only with a re-render, so it may trail the table above.
 
+Three more carry the helpers of one tutorial each and are not published yet: `neuron-finder`, `bsf-blocks` and
+`op-collection-demo` (with the two collections its tutorial loads). Their tutorials still import interpretune's in-tree
+`it_examples` until the components are published (interpretune/interpretune#1148).
+
 A component with no CPU session configuration may name its own CPU tests as its smoke, run from the published snapshot
 (`smoke: tests/`): `jlens_steering_ops`, `concept-direction`, `prompt-analysis`, `neuron-communities` and `sasa-blocks`
 are listed that way. `jlens_steering_ops` was republished with a test fix from interpretune/examples#12 (its earlier
 tests failed from a pulled snapshot); every other file of it is as first gathered. Not yet in `catalog.yaml`:
-`jspace-battery` (no CPU configuration and no CPU tests yet) and `concept_direction_ops` (no tests of its own).
+`jspace-battery` (no CPU configuration and no CPU tests yet), `concept_direction_ops` (no tests of its own) and the
+three unpublished components above, whose CPU tests run from the sources here.
 
 The components tier runs every component's tests the way a pull meets them (`scripts/run_component_tests.py
 --published-layout`: each file a symlink into a blob store, every cache empty), so a defect of that kind fails the

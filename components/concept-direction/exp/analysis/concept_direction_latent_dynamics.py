@@ -285,6 +285,33 @@ def _scales(section: Mapping[str, Any], default: float, where: str) -> list[floa
     return [float(scale) for scale in scales]
 
 
+def causal_steering_hook(causal_cfg: Mapping[str, Any], n_layers: int) -> str:
+    """The one hook ``LATENT_DYNAMICS.causal_steering.site`` addresses on an ``n_layers``-deep stack.
+
+    The site is a venngram site address (``point:hook_out & layers:10``), so the configuration names an activation
+    point and a layer rather than one architecture's hook spelling. The causal column reads the store states at that
+    site and steers there, so an address selecting more than one site is refused rather than reduced to its first.
+    A ``hook`` key is refused by name: it was the hook-name form of this setting, and reading it as a site would be a
+    guess about which spelling it used.
+    """
+    from interpretune.analysis.venngram.sites import resolve_sites
+
+    if "hook" in causal_cfg:
+        raise ValueError(
+            "LATENT_DYNAMICS.causal_steering.hook is a hook name; give `site`, a venngram site address such as "
+            f"'point:hook_out & layers:10' (got hook={causal_cfg['hook']!r})"
+        )
+    if "site" not in causal_cfg:
+        raise ValueError("LATENT_DYNAMICS.causal_steering needs a site: the address whose states it reads and steers")
+    sites = resolve_sites(causal_cfg["site"], n_layers=n_layers).sites
+    if len(sites) != 1:
+        raise ValueError(
+            f"LATENT_DYNAMICS.causal_steering.site {causal_cfg['site']!r} selects {len(sites)} sites {list(sites)}; "
+            "it reads and steers one"
+        )
+    return sites[0]
+
+
 def steering_site_config(cfg: Any, hook: str) -> Any:
     """``cfg`` with its store extraction and its direct-projection intervention both moved to ``hook``.
 
@@ -680,19 +707,18 @@ def run_latent_dynamics_analysis(config_path: str | Path) -> dict[str, Any]:
     stage's direction record, each direction's steering efficacy at every scale :func:`steering_scales` reads (a list
     per stage, one record per scale; see :func:`steering_efficacy`), the stage cosine
     matrix, per-pair diagnostics for every paired store stage, per-example records and the reconstruction check's
-    largest difference. With ``LATENT_DYNAMICS.causal_steering`` (a ``hook`` and its scales), it also reads the store
-    states at that hook, recomputes every stage there and steers at the same hook (``causal_steering``): the store-site
+    largest difference. With ``LATENT_DYNAMICS.causal_steering`` (a ``site`` address and its scales), it also reads the store
+    states at the hook that site resolves to, recomputes every stage there and steers at the same hook (``causal_steering``): the store-site
     column at ``unembed.hook_in`` is only a readout, since that site follows the final norm.
     """
     from exp.concept_direction import build_notebook_harness_config, maybe_zero_softcap, phase_run_name
+    from interpretune.harness.nb_harness_utils import _resolve_model_layer_count
     from interpretune.harness.sessions import experiment_session
 
     cfg, cleanup_work_root, payload = build_notebook_harness_config(config_path)
     latent_cfg = dict(payload.get("LATENT_DYNAMICS") or {})
     stages = stages_from_config(latent_cfg)
     causal_cfg = dict(latent_cfg.get("causal_steering") or {})
-    if causal_cfg and "hook" not in causal_cfg:
-        raise ValueError("LATENT_DYNAMICS.causal_steering needs a hook: the site whose states it reads and steers")
     try:
         with experiment_session(cfg.work_root, phase_run_name(cfg, "latent_dynamics"), **cfg.session_kwargs) as (
             _,
@@ -723,12 +749,13 @@ def run_latent_dynamics_analysis(config_path: str | Path) -> dict[str, Any]:
                     )
                 causal = None
                 if causal_cfg:
-                    hook = str(causal_cfg["hook"])
+                    hook = causal_steering_hook(causal_cfg, _resolve_model_layer_count(module))
                     site_cfg = steering_site_config(cfg, hook)
                     causal_records, _, causal_diff, _, _ = _stage_records(
                         site_cfg, module, tokenizer, model_backend, stages, latent_cfg
                     )
                     causal = {
+                        "site": str(causal_cfg["site"]),
                         "hook": hook,
                         "reconstruction_max_abs_diff": causal_diff,
                         "raw_norms": {name: rec.get("raw_norm") for name, rec in causal_records.items()},

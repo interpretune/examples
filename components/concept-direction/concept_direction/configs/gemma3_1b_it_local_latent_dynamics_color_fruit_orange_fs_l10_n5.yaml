@@ -7,7 +7,7 @@ EXPERIMENT_NAME: gemma3_1b_it_local_latent_dynamics_color_fruit_orange_fs_l10_n5
 # used. J-lens stages are added per layer with `jlens_layers` (and `jlens_basis`, default jlens_folded): the lens is
 # resolved from `neuronpedia/jacobian-lens` by the model name, and the one published for gemma-3-1b-it
 # (`gemma-3-1b-it/jlens/Salesforce-wikitext`) maps source layers 0-24. Layers 6, 10 and 14 span the store site
-# (`causal_steering.hook` below is block 10), so the causal column is layer-matched for the layer-10 stage only.
+# (`causal_steering.site` below is block 10), so the causal column is layer-matched for the layer-10 stage only.
 # Only the probe examples the model answers as expected enter the store: with every example kept, the two Color examples
 # the model answers as Fruit would pull the example-weighted directions with weights as large as their errors.
 ANALYSIS:
@@ -26,7 +26,8 @@ LATENT_DYNAMICS:
   # read the store states at a mid-layer site and steer there; the store-site column above follows the final norm,
   # so it only reads each direction's alignment with the target unembedding difference
   causal_steering:
-    hook: blocks.10.hook_out
+    # a venngram site address: the residual leaving block 10 on whichever model the experiment runs
+    site: "point:hook_out & layers:10"
     # fractions of each stage's own group separation at that site (residual norms there are 300-600, so absolute
     # scales of 10-100 move little): a stage direction steered by the separation it was read from
     relative_scales: [0.25, 0.5, 1.0, 2.0]

@@ -74,7 +74,7 @@
   "tutorials/dev/example_op_collections/op_collection_demo_utils.py": "a7a739e9457dade95ee0e4480e3ac855db352127de816c04032dc26f658f65ec",
   "tutorials/dev/example_op_collections/op_collection_example.ipynb": "da7cd012b40e5450e9f4b4c5f570cb8ad5a6c953c1696b462f2071d8289e14c3",
   "tutorials/dev/gradient_readouts/gradient_readouts.ipynb": "a8ef04aa432577f67e72c0bdf05a308bab3935cdd05ef5e0f5ffd4bc28163094",
-  "tutorials/dev/interp_engine_example/interp_engine_hub_adapter.ipynb": "3431e19ac03346eba77ba0abc4efcab5d47f1221d0cd3eac3f248a2c9c9ffaa7",
+  "tutorials/dev/interp_engine_example/interp_engine_hub_adapter.ipynb": "153e3545be1c2aa2f68a1ad02105d5770ea49eb1585fc0dd60c2c95b06e8631e",
   "tutorials/dev/neuron_communities/neuron_communities_replication.ipynb": "9c9f290477097018ded417b8cb8bf7322ad185f53206bcb1b5088461524ebafd",
   "tutorials/dev/neuron_finder/neuron_finder.ipynb": "d8f95f30f13dee09a4b06c4487d0b784f8cbe6fe308d4ec11c1ab105183f55e4",
   "tutorials/dev/neuronpedia_example/circuit_tracer_w_neuronpedia_example.ipynb": "c058590e1d2b2ebb8d93e8ba6df558a2852fc42b142daa9e4f2a719676b358d2",

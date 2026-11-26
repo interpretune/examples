@@ -91,6 +91,7 @@
   "tutorials/dev/saelens_adapter_example/sl_utils/sl_mem_utils.py": "e5d212369c23b6ebfef3d25a0642b8f1a87e430964c1ae8d55607f88b6228654",
   "tutorials/dev/sasa_blocks/sasa_blocks_frames_charts.ipynb": "305fbd441d59cc382a94c139b4d7109e02f832261a1391fbe08a0be55693e52d",
   "tutorials/dev/shared_analysis/shared_analysis_roundtrip.ipynb": "a9d535bf3e5d634597d79e1fd9d7e001d90d48c8a5591d3f4911698d44fd919d",
+  "tutorials/dev/tuning/circuit_tracer_tuning.ipynb": "3e349f8398d7abec893125d7406002814fdf09ee6ad90ce9c50e30dc840890dc",
   "tutorials/dev/tuning/interp_engine_tuning.ipynb": "b0478c95543560fa754a9a6cc2b9facb7ad018614782376e5a4047ed2b68a564",
   "tutorials/dev/tuning/role_kinds_tuning.ipynb": "2a9f5df74c910e802caef39a321c6736046dfddd7fdacbf262891cd7e7363672"
 }

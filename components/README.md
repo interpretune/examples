@@ -13,7 +13,7 @@ defines what other components compose); the catalog check refuses an entry witho
 | --- | --- | --- |
 | `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `4e58126454837a6572b13c9d53c1af15e0605478` |
 | `prompt-configs/` | [`speediedan/prompt-configs`](https://huggingface.co/speediedan/prompt-configs) | `3d8b9710061283dd14c86a46f0c0649b5e262db0` |
-| `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `736e2ca563102fdaaa1c286eefb3ac4bfa6f85a2` |
+| `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `618a73abae788f91c4f2a8548d230cbec5d645cb` |
 | `concept_direction_ops/` | [`speediedan/concept_direction_ops`](https://huggingface.co/speediedan/concept_direction_ops) | `16affe3811eb8c5e601def07bd47b41ef4fcdf47` |
 | `jlens_steering_ops/` | [`speediedan/jlens_steering_ops`](https://huggingface.co/speediedan/jlens_steering_ops) | `22b03610f1a2eb4a8afc4957f17cf6a77e46ff87` |
 | `jspace-battery/` | [`speediedan/jspace-battery`](https://huggingface.co/speediedan/jspace-battery) | `8cac45ebf7e72f2a7b277f30371261cd336a522d` |

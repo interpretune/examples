@@ -13,7 +13,7 @@
 #   first_party:   true when its source lives under components/
 components:
   - repo: speediedan/rte
-    revision: 834a448741b2d092372d97f481d8aa10d609a615
+    revision: fba0afcff43e09a1882aadd767720195880d0755
     kinds: [module, datamodule]
     interpretune: '>=0.1.dev0'
     owner: speediedan
@@ -34,14 +34,14 @@ components:
     smoke: tests/  # an op collection has no session configuration: its own CPU tests, run from the snapshot
     first_party: true
   - repo: speediedan/concept-direction
-    revision: 6c54baa93a99747dbe2e08b052a9ba31d2951cd6
+    revision: 618a73abae788f91c4f2a8548d230cbec5d645cb
     kinds: [experiment, helpers]
     interpretune: '>=0.1.dev0'
     owner: speediedan
     smoke: tests/  # its experiments load Gemma 3 1B: its CPU stage-table tests, run from the snapshot
     first_party: true
   - repo: speediedan/prompt-analysis
-    revision: 6dd0dd5260bdd56a2c8cd7fb8a2c377554288034
+    revision: 734afa3614851ca3027512089dfc519a30370d5e
     kinds: [module, helpers]
     interpretune: '>=0.1.dev0'
     owner: speediedan
@@ -56,6 +56,27 @@ components:
     first_party: true
   - repo: speediedan/sasa-blocks
     revision: 6f51af7ff5e59cb44c2e76f6f8efedb0641acdd6
+    kinds: [helpers]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: tests/  # helper modules only: their CPU tests, run from the snapshot
+    first_party: true
+  - repo: speediedan/neuron-finder
+    revision: 73b3d860b0ae11b8aa13c2264d6c912eceea8345
+    kinds: [helpers]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: tests/  # helper modules only: their CPU tests, run from the snapshot
+    first_party: true
+  - repo: speediedan/bsf-blocks
+    revision: 0014a7be01cf33d1b2a3db8eb97d1875e9e93145
+    kinds: [helpers]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: tests/  # helper modules only: their CPU tests, run from the snapshot
+    first_party: true
+  - repo: speediedan/op-collection-demo
+    revision: 005039b5fc37fa42f3deb800aa84dd7dadca531e
     kinds: [helpers]
     interpretune: '>=0.1.dev0'
     owner: speediedan

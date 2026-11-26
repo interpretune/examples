@@ -103,6 +103,9 @@ _SIGNED_FEATURE_SCORE_SOURCE_KEYS = frozenset({"node_signed_influence_scores", "
 
 
 DEFAULT_CONCEPT_PAIR_CONFIG_DIR = Path(__file__).with_name("configs")
+# The models this experiment supports, shipped with it. Not resolved: in a pulled snapshot this file is a link into the
+# cache's blob store, away from its siblings.
+MODEL_SPECS_PATH = Path(__file__).parents[1] / "model_specs.yaml"
 DEFAULT_NOTEBOOK_PATH = Path(__file__).resolve().with_name("concept_direction_template.ipynb")
 # No default: this fell back to an absolute path under one contributor's home directory, which exists on
 # no other machine. See the same constant in `nb_harness_utils` for the reasoning; the two are kept in
@@ -749,6 +752,7 @@ class NotebookHarnessConfig:
         return {
             "model_family": self.model_family,
             "model_variant": self.model_variant,
+            "model_specs": MODEL_SPECS_PATH,
             "model_name": self.model_name,
             "transcoder_set": self.transcoder_set,
             "hf_model_head": self.hf_model_head,
@@ -858,6 +862,7 @@ def build_notebook_harness_config(
     model_spec = resolve_model_spec(
         model_family,
         model_variant,
+        model_specs=MODEL_SPECS_PATH,
         model_name_override=get_config_value(
             resolved_payload,
             section="MODEL",

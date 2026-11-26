@@ -11,15 +11,26 @@ defines what other components compose); the catalog check refuses an entry witho
 
 | directory | Hub repository | published revision |
 | --- | --- | --- |
-| `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `834a448741b2d092372d97f481d8aa10d609a615` |
+| `rte/` | [`speediedan/rte`](https://huggingface.co/speediedan/rte) | `fba0afcff43e09a1882aadd767720195880d0755` |
 | `prompt-configs/` | [`speediedan/prompt-configs`](https://huggingface.co/speediedan/prompt-configs) | `3d8b9710061283dd14c86a46f0c0649b5e262db0` |
-| `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `6c54baa93a99747dbe2e08b052a9ba31d2951cd6` |
+| `concept-direction/` | [`speediedan/concept-direction`](https://huggingface.co/speediedan/concept-direction) | `618a73abae788f91c4f2a8548d230cbec5d645cb` |
 | `concept_direction_ops/` | [`speediedan/concept_direction_ops`](https://huggingface.co/speediedan/concept_direction_ops) | `16affe3811eb8c5e601def07bd47b41ef4fcdf47` |
 | `jlens_steering_ops/` | [`speediedan/jlens_steering_ops`](https://huggingface.co/speediedan/jlens_steering_ops) | `22b03610f1a2eb4a8afc4957f17cf6a77e46ff87` |
 | `jspace-battery/` | [`speediedan/jspace-battery`](https://huggingface.co/speediedan/jspace-battery) | `8cac45ebf7e72f2a7b277f30371261cd336a522d` |
-| `prompt-analysis/` | [`speediedan/prompt-analysis`](https://huggingface.co/speediedan/prompt-analysis) | `6dd0dd5260bdd56a2c8cd7fb8a2c377554288034` |
+| `prompt-analysis/` | [`speediedan/prompt-analysis`](https://huggingface.co/speediedan/prompt-analysis) | `734afa3614851ca3027512089dfc519a30370d5e` |
 | `neuron-communities/` | [`speediedan/neuron-communities`](https://huggingface.co/speediedan/neuron-communities) | `9176d38f345fcb6805e257ed9fdee377cafc0fd1` |
 | `sasa-blocks/` | [`speediedan/sasa-blocks`](https://huggingface.co/speediedan/sasa-blocks) | `6f51af7ff5e59cb44c2e76f6f8efedb0641acdd6` |
+| `neuron-finder/` | [`speediedan/neuron-finder`](https://huggingface.co/speediedan/neuron-finder) | `73b3d860b0ae11b8aa13c2264d6c912eceea8345` |
+| `bsf-blocks/` | [`speediedan/bsf-blocks`](https://huggingface.co/speediedan/bsf-blocks) | `0014a7be01cf33d1b2a3db8eb97d1875e9e93145` |
+| `op-collection-demo/` | [`speediedan/op-collection-demo`](https://huggingface.co/speediedan/op-collection-demo) | `005039b5fc37fa42f3deb800aa84dd7dadca531e` |
+| `knowing-using/` | [`speediedan/knowing-using`](https://huggingface.co/speediedan/knowing-using) | `dfa15ed754def79a190bc3771df3929d8f4a3448` |
+| `oracle-lens/` | [`speediedan/oracle-lens`](https://huggingface.co/speediedan/oracle-lens) | `5f510268db0871b266e95f8ba076f243654f37c1` |
+
+`knowing-using` and `oracle-lens` moved from interpretune's `src/it_examples/examples/` as well. `knowing-using` was
+republished from this repository (its published revision predated the moved `knowing_using.py`); `oracle-lens`'s
+published revision already matched the moved tree. Neither is in `catalog.yaml` yet: `knowing-using`'s CPU tests live
+in `tests/components/` rather than in its snapshot, and `oracle-lens`'s published tree does not ship its `tests/`, so
+neither has a smoke the scheduled run can execute from the snapshot.
 
 Both moved from interpretune's in-tree publish sources (`src/it_examples/examples/rte/` and
 `src/it_examples/examples/prompt_configs/`). `rte_boolq.py`, which until now existed only on the Hub, comes from the
@@ -35,15 +46,17 @@ are not built by `local_publish`, so the files here are the published files as t
 (`scripts/publish_op_collection.py`) and has diverged from it since. Its source is now the directory here, not that
 family.
 
-Four components carry the notebook helpers that serve one experiment (kind `helpers`, loaded with
-`it.hub.load_helpers`): `concept-direction`, `prompt-analysis`, `neuron-communities` and `sasa-blocks`. The helpers were
-copied from interpretune's `it_examples.utils`, and the notebooks import them from there until the components are
-published and the notebooks repoint (interpretune/interpretune#1148). All four are published at the revisions above,
-which is the first published state of each helper module.
+Four components carry the notebook helpers that serve one experiment (kind `helpers`): `concept-direction`,
+`prompt-analysis`, `neuron-communities` and `sasa-blocks`. The tutorials load them with `it.hub.load_helpers` at the
+revision each one pins in its parameters cell, after `it.hub.pull` fetches it and the notebook opts in to running it. A
+tutorial's pin moves only with a re-render, so it may trail the table above.
+
+Three more carry the helpers of one tutorial each: `neuron-finder`, `bsf-blocks` and `op-collection-demo` (with the
+two collections its tutorial loads). Their tutorials load them the same way.
 
 A component with no CPU session configuration may name its own CPU tests as its smoke, run from the published snapshot
-(`smoke: tests/`): `jlens_steering_ops`, `concept-direction`, `prompt-analysis`, `neuron-communities` and `sasa-blocks`
-are listed that way. `jlens_steering_ops` was republished with a test fix from interpretune/examples#12 (its earlier
+(`smoke: tests/`): `jlens_steering_ops`, `concept-direction`, `prompt-analysis`, `neuron-communities`, `sasa-blocks`,
+`neuron-finder`, `bsf-blocks` and `op-collection-demo` are listed that way. `jlens_steering_ops` was republished with a test fix from interpretune/examples#12 (its earlier
 tests failed from a pulled snapshot); every other file of it is as first gathered. Not yet in `catalog.yaml`:
 `jspace-battery` (no CPU configuration and no CPU tests yet) and `concept_direction_ops` (no tests of its own).
 

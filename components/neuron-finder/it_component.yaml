@@ -1,0 +1,17 @@
+# interpretune component manifest (schema v1)
+# The helpers the neuron-finder tutorial finds, steers and books neurons with. Nothing here builds a model: each
+# measurement takes a model, its down projections or its model backend.
+it_schema_version: 1
+kinds:
+- helpers
+requires:
+  interpretune: '>=0.1.dev0'
+  adapters: []
+  pip:
+  - venngram
+helpers:
+  modules:
+    neuron_finder: neuron_finder.py
+# Published beside the module so its CPU checks travel with the component.
+extra_files:
+- tests/test_neuron_finder_helpers.py

@@ -1,0 +1,16 @@
+# interpretune component manifest (schema v1)
+# The block-sparse featurizers the BSF blocks tutorial edits and tunes: the module, its loader and its address book.
+# Nothing here builds a language model; a featurizer is attached to one.
+it_schema_version: 1
+kinds:
+- helpers
+requires:
+  interpretune: '>=0.1.dev0'
+  adapters: []
+  pip: []
+helpers:
+  modules:
+    bsf_featurizers: bsf_featurizers.py
+# Published beside the module so its CPU checks travel with the component.
+extra_files:
+- tests/test_bsf_featurizers.py

@@ -707,9 +707,10 @@ def run_latent_dynamics_analysis(config_path: str | Path) -> dict[str, Any]:
     stage's direction record, each direction's steering efficacy at every scale :func:`steering_scales` reads (a list
     per stage, one record per scale; see :func:`steering_efficacy`), the stage cosine
     matrix, per-pair diagnostics for every paired store stage, per-example records and the reconstruction check's
-    largest difference. With ``LATENT_DYNAMICS.causal_steering`` (a ``site`` address and its scales), it also reads the store
-    states at the hook that site resolves to, recomputes every stage there and steers at the same hook (``causal_steering``): the store-site
-    column at ``unembed.hook_in`` is only a readout, since that site follows the final norm.
+    largest difference. With ``LATENT_DYNAMICS.causal_steering`` (a ``site`` address and its scales), it also reads
+    the store states at the hook that site resolves to, recomputes every stage there and steers at the same hook
+    (``causal_steering``): the store-site column at ``unembed.hook_in`` is only a readout, since that site follows the
+    final norm.
     """
     from exp.concept_direction import build_notebook_harness_config, maybe_zero_softcap, phase_run_name
     from interpretune.harness.nb_harness_utils import _resolve_model_layer_count

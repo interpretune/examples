@@ -44,8 +44,7 @@ revision each one pins in its parameters cell, after `it.hub.pull` fetches it an
 tutorial's pin moves only with a re-render, so it may trail the table above.
 
 Three more carry the helpers of one tutorial each: `neuron-finder`, `bsf-blocks` and `op-collection-demo` (with the
-two collections its tutorial loads). They are published but still private, and their tutorials still import
-interpretune's in-tree `it_examples` until they are repointed and re-rendered (interpretune/interpretune#1148).
+two collections its tutorial loads). Their tutorials load them the same way.
 
 A component with no CPU session configuration may name its own CPU tests as its smoke, run from the published snapshot
 (`smoke: tests/`): `jlens_steering_ops`, `concept-direction`, `prompt-analysis`, `neuron-communities`, `sasa-blocks`,

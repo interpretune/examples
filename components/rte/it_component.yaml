@@ -47,6 +47,7 @@ module:
     rte_demo.gpt2.core: configs/rte_demo.gpt2.core.yaml
     rte_demo.gpt2.nnsight+sae_lens: configs/rte_demo.gpt2.nnsight+sae_lens.yaml
     rte_demo.gpt2.sae_lens: configs/rte_demo.gpt2.sae_lens.yaml
+    rte_ft.gemma3.circuit_tracer+nnsight: configs/rte_ft.gemma3.circuit_tracer+nnsight.yaml
     rte_ft.gemma3.core: configs/rte_ft.gemma3.core.yaml
     rte_ft.gpt2.core: configs/rte_ft.gpt2.core.yaml
     rte_ft.gpt2.nnsight: configs/rte_ft.gpt2.nnsight.yaml

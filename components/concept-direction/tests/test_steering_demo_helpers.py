@@ -105,3 +105,42 @@ def test_steering_scale_point_reads_both_targets_and_normalizes_over_the_whole_v
     expected = torch.softmax(pre, dim=-1)
     assert point.pre_probs == pytest.approx((float(expected[0]), float(expected[1])))
     assert sum(point.pre_probs) < 1.0
+
+
+# Block depths of the families the steering arms are written for: gemma-2-2b and gemma-3-1b-it (the demos'
+# substrates), and Llama-3.2-1B and gpt2, two further mapped families the same addresses must serve unchanged.
+_FAMILY_DEPTHS = {"gemma-2-2b": 26, "gemma-3-1b-it": 26, "Llama-3.2-1B": 16, "gpt2": 12}
+
+
+@pytest.mark.parametrize("n_layers", sorted(set(_FAMILY_DEPTHS.values())))
+def test_direct_site_address_is_the_unembed_input_on_every_depth(n_layers):
+    assert helpers.steering_site(helpers.DIRECT_SITE_ADDRESS, n_layers) == "unembed.hook_in"
+
+
+@pytest.mark.parametrize("family", sorted(_FAMILY_DEPTHS))
+def test_lens_site_address_names_one_residual_site(family):
+    n_layers = _FAMILY_DEPTHS[family]
+    assert helpers.steering_site(helpers.lens_site_address(n_layers - 2), n_layers) == (
+        f"blocks.{n_layers - 2}.hook_resid_post"
+    )
+    # The last block by a negative index, which the interp-engine arm uses in place of the unembed's input.
+    assert helpers.steering_site(helpers.lens_site_address(-1), n_layers) == f"blocks.{n_layers - 1}.hook_resid_post"
+
+
+def test_steering_site_refuses_an_address_selecting_several_sites():
+    with pytest.raises(ValueError, match=r"selects 4 sites .*an arm edits one"):
+        helpers.steering_site("point:hook_resid_post & layers:8:12", 12)
+
+
+def test_steering_site_refuses_an_unknown_point_by_name():
+    from interpretune.utils import MisconfigurationException
+
+    with pytest.raises(MisconfigurationException, match=r"not an activation point"):
+        helpers.steering_site("point:hook_resid_sideways", 12)
+
+
+def test_steering_site_refuses_a_layer_past_the_stack():
+    from interpretune.utils import MisconfigurationException
+
+    with pytest.raises(MisconfigurationException, match=r"Layer 24 is outside a stack of 16 blocks"):
+        helpers.steering_site(helpers.lens_site_address(24), 16)

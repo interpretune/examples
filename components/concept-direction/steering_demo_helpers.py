@@ -7,7 +7,7 @@ importable by tests without a kernel.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, NamedTuple
 
 import torch
@@ -18,6 +18,35 @@ from interpretune.analysis.ops.base import AnalysisBatch
 from interpretune.analysis.ops.bundled.jlens.jlens_ops import jlens_readout_logits
 from interpretune.analysis.optools import UnembedNormInfo
 from interpretune.config import AnalysisCfg, init_analysis_cfgs
+
+
+#: The steering arms' sites, written once as venngram site addresses. The direct arm, the embed-basis patch and the
+#: direct arm of the scale sweep all edit the unembed's input, a global point that belongs to no block; the J-lens
+#: validation probes the residual after its fitted layer, which :func:`lens_site_address` names.
+DIRECT_SITE_ADDRESS = "point:unembed.hook_in"
+
+
+def lens_site_address(layer: int) -> str:
+    """The venngram site address of the residual stream after block ``layer``: the J-lens validation's probe site.
+
+    A negative ``layer`` counts from the end of the stack, so ``-1`` names the last block on any depth.
+    """
+    return f"point:hook_resid_post & layers:{layer}"
+
+
+def steering_site(address: Any, n_layers: int, sets: Mapping[str, Any] | None = None) -> str:
+    """The one hook name a steering arm's venngram site address selects on an ``n_layers``-deep stack.
+
+    A steering arm edits exactly one site, so an address that selects several (a layer range, a union of points)
+    is refused by name rather than reduced to its first site, which would steer somewhere the address did not say.
+    The point spelling is checked against the activation-point vocabulary, so an unknown point is refused too.
+    """
+    from interpretune.analysis.venngram.sites import resolve_sites
+
+    sites = resolve_sites(address, n_layers=n_layers, sets=sets).sites
+    if len(sites) != 1:
+        raise ValueError(f"the steering address {address!r} selects {len(sites)} sites {list(sites)}; an arm edits one")
+    return sites[0]
 
 
 def embed_pole_pair(module: Any, tokenizer: Any, group_a: Sequence[str], group_b: Sequence[str]) -> torch.Tensor:

@@ -1004,6 +1004,62 @@ def test_interp_engine_tuning_notebook(tmp_path: Path):
     _cleanup_notebook_artifacts()
 
 
+# Trains on the train split, whose arrow read fails on Windows runners (as for the role kinds notebook above).
+@RunIf(skip_windows=True)
+@pytest.mark.hf_live
+@pytest.mark.skipif(
+    not (os.environ.get("HF_GATED_PUBLIC_REPO_AUTH_KEY") or os.environ.get("HF_TOKEN")),
+    reason="HF_GATED_PUBLIC_REPO_AUTH_KEY or HF_TOKEN required to load the gated google/gemma-3-270m-it",
+)
+def test_circuit_tracer_tuning_notebook(tmp_path: Path):
+    """A circuit-tracer composition tuned in two stages, whole and through low-rank corrections (interpretune#812).
+
+    CPU-only, against the local-publish rte snapshot, with the attribution graphs left out. The notebook asserts which
+    tensors each stage thaws and changes, that the base model holds while the transcoders are re-fitted, and that the
+    lazily loaded run's base tuning is identical; this checks it ran clean and reached the fit table for both runs.
+    """
+    from interpretune.hub.components import local_publish
+
+    from tests.support.rte_component import rte_entrypoint_src
+
+    rev = local_publish(RTE_COMPONENT_DIR, "speediedan/rte", entrypoint_src=rte_entrypoint_src())
+    output_dir = tmp_path / "notebook_outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_notebook = execute_notebook_with_params(
+        notebook_path=NOTEBOOKS_DIR / "tuning" / "circuit_tracer_tuning.ipynb",
+        parameters={
+            "LIMIT_TRAIN_BATCHES": 2,
+            "LIMIT_VAL_BATCHES": 1,
+            "FIT_BATCHES": 1,
+            "ATTRIBUTE": False,
+            "REVISION": rev,
+        },
+        output_dir=output_dir,
+    )
+
+    import nbformat
+
+    with open(output_notebook) as f:
+        nb = nbformat.read(f, as_version=4)
+    errors = [
+        output.get("ename", "") + ": " + output.get("evalue", "")
+        for cell in nb.cells
+        if cell.cell_type == "code"
+        for output in cell.get("outputs", [])
+        if output.output_type == "error"
+    ]
+    assert not errors, f"error outputs in executed notebook: {errors}"
+    html = "".join(
+        "".join(o.get("data", {}).get("text/html", ""))
+        for cell in nb.cells
+        if cell.cell_type == "code"
+        for o in cell.get("outputs", [])
+    )
+    assert "How well the transcoders reconstruct" in html and "rank-8 decoder corrections" in html
+
+    _cleanup_notebook_artifacts()
+
+
 # The train-split arrow read fails on Windows runners (OSError 22 on mmap) while test-split
 # paths pass there; the demo needs the train split for its fit leg, so it skips Windows.
 @RunIf(skip_windows=True)
@@ -1243,6 +1299,7 @@ def test_notebook_discovery():
         "sasa_blocks/sasa_blocks_frames_charts.ipynb",
         "saelens_adapter_example/saelens_adapter_example.ipynb",
         "shared_analysis/shared_analysis_roundtrip.ipynb",
+        "tuning/circuit_tracer_tuning.ipynb",
         "tuning/interp_engine_tuning.ipynb",
         "tuning/role_kinds_tuning.ipynb",
         "tuning/sae_lora_tuning.ipynb",

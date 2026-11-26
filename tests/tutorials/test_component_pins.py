@@ -10,8 +10,11 @@ import pytest
 
 DEV = Path(__file__).resolve().parents[2] / "tutorials" / "dev"
 
-# Tutorials still importing interpretune's in-tree `it_examples`: none, so interpretune can delete that tree.
-NOT_YET_REPOINTED: set[str] = set()
+# This one still imports interpretune's in-tree `it_examples`: interp_engine_hub_adapter waits for a host with the
+# memory to re-render it.
+NOT_YET_REPOINTED = {
+    "interp_engine_example/interp_engine_hub_adapter.ipynb",
+}
 
 
 def _code(path: Path) -> str:

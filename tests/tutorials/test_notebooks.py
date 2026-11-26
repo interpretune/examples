@@ -860,6 +860,53 @@ def test_gradient_readouts_notebook(tmp_path: Path):
     _cleanup_notebook_artifacts()
 
 
+# Trains on text read from an arrow file, as the role kinds notebook below does on Windows runners.
+@RunIf(skip_windows=True)
+def test_sae_lora_tuning_notebook(tmp_path: Path):
+    """LoRA adapters trained around a frozen SAE, against one layer, the SAE alone and a staged run (interpretune#860).
+
+    CPU-only, at a scale whose numbers mean nothing. The notebook asserts what each stage thaws and changes, that no
+    base weight is tuned and which checkpoints hold the SAE; this checks it ran clean and reached every table.
+    """
+    output_dir = tmp_path / "notebook_outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_notebook = execute_notebook_with_params(
+        notebook_path=NOTEBOOKS_DIR / "tuning" / "sae_lora_tuning.ipynb",
+        parameters={
+            "STEPS_PER_EPOCH": 2,  # LoRA's A first moves on the second step: B starts at zero
+            "EPOCHS": 3,
+            "BATCH_SIZE": 2,
+            "CONTEXT": 32,
+            "TEST_BLOCKS": 8,
+            "VAL_BLOCKS": 2,
+        },
+        output_dir=output_dir,
+    )
+
+    import nbformat
+
+    with open(output_notebook) as f:
+        nb = nbformat.read(f, as_version=4)
+    errors = [
+        output.get("ename", "") + ": " + output.get("evalue", "")
+        for cell in nb.cells
+        if cell.cell_type == "code"
+        for output in cell.get("outputs", [])
+        if output.output_type == "error"
+    ]
+    assert not errors, f"error outputs in executed notebook: {errors}"
+    html = "".join(
+        "".join(o.get("data", {}).get("text/html", ""))
+        for cell in nb.cells
+        if cell.cell_type == "code"
+        for o in cell.get("outputs", [])
+    )
+    for title in ("Test loss and gap closed", "Paired by test block", "checkpoints holds"):
+        assert title in html, title
+
+    _cleanup_notebook_artifacts()
+
+
 # Trains on the train split, whose arrow read fails on Windows runners (as for the runner demo below).
 @RunIf(skip_windows=True)
 def test_role_kinds_tuning_notebook(tmp_path: Path):
@@ -1255,6 +1302,7 @@ def test_notebook_discovery():
         "tuning/circuit_tracer_tuning.ipynb",
         "tuning/interp_engine_tuning.ipynb",
         "tuning/role_kinds_tuning.ipynb",
+        "tuning/sae_lora_tuning.ipynb",
     }
 
     missing = sorted(roster - published)

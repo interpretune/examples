@@ -279,7 +279,7 @@ def test_the_shipped_config_resolves_to_the_default_table_and_valid_projection_s
     assert [(s.name, s.basis, s.mode, s.jlens_layer) for s in stages[len(DEFAULT_STAGES) :]] == [
         (f"jlens_folded_l{layer}", "jlens_folded", "paired_rejection", layer) for layer in (6, 10, 14)
     ]
-    assert latent["causal_steering"]["hook"] == "blocks.10.hook_out"
+    assert latent["causal_steering"]["site"] == "point:hook_out & layers:10"
     accepted = set(inspect.signature(project_embeddings).parameters) - {"values"}
     unknown = sorted(set(latent["projection"]) - accepted)
     assert not unknown, f"projection settings project_embeddings does not take: {unknown}"
@@ -679,3 +679,23 @@ def test_state_separation_refuses_a_group_with_fewer_than_two_examples(inputs: S
     lonely = torch.tensor([0] * (int(inputs.group_ids.shape[0]) - 1) + [1])
     with pytest.raises(ValueError, match="at least two examples in each group"):
         state_separation(StageInputs(**{**inputs.__dict__, "group_ids": lonely}))
+
+
+def test_the_causal_site_address_resolves_to_one_hook_on_each_family_depth():
+    from exp.analysis.concept_direction_latent_dynamics import causal_steering_hook
+
+    # gemma-3-1b-it (the experiment's model) and two further mapped families the address must serve unchanged
+    for n_layers in (26, 16, 12):
+        assert causal_steering_hook({"site": "point:hook_out & layers:10"}, n_layers) == "blocks.10.hook_out"
+    assert causal_steering_hook({"site": "point:hook_out & layers:-1"}, 16) == "blocks.15.hook_out"
+
+
+def test_the_causal_site_refuses_a_hook_name_a_missing_site_and_several_sites():
+    from exp.analysis.concept_direction_latent_dynamics import causal_steering_hook
+
+    with pytest.raises(ValueError, match=r"causal_steering.hook is a hook name; give `site`"):
+        causal_steering_hook({"hook": "blocks.10.hook_out"}, 26)
+    with pytest.raises(ValueError, match=r"needs a site"):
+        causal_steering_hook({"relative_scales": [1.0]}, 26)
+    with pytest.raises(ValueError, match=r"selects 2 sites"):
+        causal_steering_hook({"site": "point:hook_out & layers:10:12"}, 26)

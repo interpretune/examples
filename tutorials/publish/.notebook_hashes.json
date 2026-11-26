@@ -89,7 +89,7 @@
   "tutorials/dev/saelens_adapter_example/saelens_adapter_example.ipynb": "04f8edce2f202e16ea4cd5ad1f66920039c6e850c3e7423348edd0374309ef1b",
   "tutorials/dev/saelens_adapter_example/side_by_side_yaml.png": "d190f0c9c0946347f77f109b4ff1e1d65bc2be70a1903defbf651b9bc75da281",
   "tutorials/dev/saelens_adapter_example/sl_utils/sl_mem_utils.py": "e5d212369c23b6ebfef3d25a0642b8f1a87e430964c1ae8d55607f88b6228654",
-  "tutorials/dev/sasa_blocks/sasa_blocks_frames_charts.ipynb": "147bd281861cdae07960c9db78527103d5c22854d22fadffd39ad61cc4d9727a",
+  "tutorials/dev/sasa_blocks/sasa_blocks_frames_charts.ipynb": "305fbd441d59cc382a94c139b4d7109e02f832261a1391fbe08a0be55693e52d",
   "tutorials/dev/shared_analysis/shared_analysis_roundtrip.ipynb": "a9d535bf3e5d634597d79e1fd9d7e001d90d48c8a5591d3f4911698d44fd919d",
   "tutorials/dev/tuning/interp_engine_tuning.ipynb": "b0478c95543560fa754a9a6cc2b9facb7ad018614782376e5a4047ed2b68a564",
   "tutorials/dev/tuning/role_kinds_tuning.ipynb": "2a9f5df74c910e802caef39a321c6736046dfddd7fdacbf262891cd7e7363672"

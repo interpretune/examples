@@ -13,7 +13,7 @@
 #   first_party:   true when its source lives under components/
 components:
   - repo: speediedan/rte
-    revision: 297d5bbd914326545e608ddc4ce191884355211e
+    revision: 4e58126454837a6572b13c9d53c1af15e0605478
     kinds: [module, datamodule]
     interpretune: '>=0.1.dev0'
     owner: speediedan
@@ -41,7 +41,7 @@ components:
     smoke: tests/  # its experiments load Gemma 3 1B: its CPU stage-table tests, run from the snapshot
     first_party: true
   - repo: speediedan/prompt-analysis
-    revision: 6dd0dd5260bdd56a2c8cd7fb8a2c377554288034
+    revision: 734afa3614851ca3027512089dfc519a30370d5e
     kinds: [module, helpers]
     interpretune: '>=0.1.dev0'
     owner: speediedan

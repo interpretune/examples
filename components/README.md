@@ -23,6 +23,14 @@ defines what other components compose); the catalog check refuses an entry witho
 | `neuron-finder/` | [`speediedan/neuron-finder`](https://huggingface.co/speediedan/neuron-finder) | `73b3d860b0ae11b8aa13c2264d6c912eceea8345` |
 | `bsf-blocks/` | [`speediedan/bsf-blocks`](https://huggingface.co/speediedan/bsf-blocks) | `0014a7be01cf33d1b2a3db8eb97d1875e9e93145` |
 | `op-collection-demo/` | [`speediedan/op-collection-demo`](https://huggingface.co/speediedan/op-collection-demo) | `005039b5fc37fa42f3deb800aa84dd7dadca531e` |
+| `knowing-using/` | [`speediedan/knowing-using`](https://huggingface.co/speediedan/knowing-using) | `dfa15ed754def79a190bc3771df3929d8f4a3448` |
+| `oracle-lens/` | [`speediedan/oracle-lens`](https://huggingface.co/speediedan/oracle-lens) | `5f510268db0871b266e95f8ba076f243654f37c1` |
+
+`knowing-using` and `oracle-lens` moved from interpretune's `src/it_examples/examples/` as well. `knowing-using` was
+republished from this repository (its published revision predated the moved `knowing_using.py`); `oracle-lens`'s
+published revision already matched the moved tree. Neither is in `catalog.yaml` yet: `knowing-using`'s CPU tests live
+in `tests/components/` rather than in its snapshot, and `oracle-lens`'s published tree does not ship its `tests/`, so
+neither has a smoke the scheduled run can execute from the snapshot.
 
 Both moved from interpretune's in-tree publish sources (`src/it_examples/examples/rte/` and
 `src/it_examples/examples/prompt_configs/`). `rte_boolq.py`, which until now existed only on the Hub, comes from the

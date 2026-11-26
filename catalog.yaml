@@ -61,3 +61,24 @@ components:
     owner: speediedan
     smoke: tests/  # helper modules only: their CPU tests, run from the snapshot
     first_party: true
+  - repo: speediedan/neuron-finder
+    revision: 73b3d860b0ae11b8aa13c2264d6c912eceea8345
+    kinds: [helpers]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: tests/  # helper modules only: their CPU tests, run from the snapshot
+    first_party: true
+  - repo: speediedan/bsf-blocks
+    revision: 0014a7be01cf33d1b2a3db8eb97d1875e9e93145
+    kinds: [helpers]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: tests/  # helper modules only: their CPU tests, run from the snapshot
+    first_party: true
+  - repo: speediedan/op-collection-demo
+    revision: 005039b5fc37fa42f3deb800aa84dd7dadca531e
+    kinds: [helpers]
+    interpretune: '>=0.1.dev0'
+    owner: speediedan
+    smoke: tests/  # helper modules only: their CPU tests, run from the snapshot
+    first_party: true

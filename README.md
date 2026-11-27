@@ -6,6 +6,9 @@ it lives here, pinned to an Interpretune release.
 
 Documentation: <https://interpretune.org/projects/examples/> (a subproject of the Interpretune docs).
 
+New here? The [user guide](docs/user_guide.md) installs interpretune, pulls a component, runs it from the command line
+and runs a tutorial notebook.
+
 ## Layout
 
 | path | what it holds |
@@ -17,7 +20,7 @@ Documentation: <https://interpretune.org/projects/examples/> (a subproject of th
 | `catalog.yaml` | the curated list of first-party and community components, each with a pinned revision and a CPU smoke (a configuration run for one batch, or the component's own CPU tests) |
 | `dashboards/` | Neuronpedia dashboard generation configurations |
 | `tests/` | tests for the tutorials, components and catalog |
-| `docs/` | the Read the Docs subproject |
+| `docs/` | the Read the Docs subproject: the [user guide](docs/user_guide.md) and the [gallery](docs/gallery.md) |
 
 ## Conventions
 

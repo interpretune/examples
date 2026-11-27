@@ -123,9 +123,9 @@ That run tunes GPT-2 on RTE in phases (finetuning-scheduler, on interpretune's c
 comment saying what it runs, on what hardware, and its command line; read them in
 [`components/rte/runs/`](../components/rte/runs).
 
-GPT-2 is small enough for a CPU, but the run as shipped trains on all of RTE for up to ten epochs: minutes on a GPU,
-many hours on a CPU. Any setting can be overridden on the command line, after the `--config`, so for a quick look on a
-CPU, limit the epochs and batches:
+The GPT-2 configurations run on the CPU (their model loads with `device_map: cpu`). As shipped, the run trains on all of
+RTE until the schedule's last phase plateaus, at most ten epochs: about 90 minutes on a desktop CPU. Any setting can be
+overridden on the command line, after the `--config`, so for a quick look, limit the epochs and batches:
 
 ```bash
 interpretune --run_command train --config hub://speediedan/rte/runs/rte_ft.gpt2.core.yaml \

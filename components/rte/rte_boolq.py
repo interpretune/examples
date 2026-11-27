@@ -51,6 +51,15 @@ from interpretune import (
     STEP_OUTPUT,
 )
 from interpretune.utils.import_utils import package_available
+import math
+import json
+import hashlib
+import tempfile
+import re
+from typing import Sequence, Mapping, Iterator
+from contextlib import AbstractContextManager, contextmanager, ExitStack
+from copy import deepcopy
+from types import SimpleNamespace
 
 # The adapter-specific config classes below exist only when their adapter is installed. This module is the
 # entrypoint of the `rte` seed component, which a hub adapter's conformance run hydrates on a bare core
@@ -1262,3 +1271,993 @@ class ChainGraphGate:
         )
         print(f"ChainGraphGate phase {event.depth}: {verdict} {record}", flush=True)
         return GateResult(accept=within or not judged, reason=reason, record=record)
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# Sparse attribution: sparse_attribution_report
+# Aggregate checkpoint attribution measurements without changing their denominator.
+#
+# Head loadings partition summed source edges, which need not equal the measured decision. This report retains both:
+# source and head contributions are aligned with each item's decision and divided by the sum of absolute decisions.
+# Layers are separate partitions, so their head shares must not be added together. A supplied bias is measured by the
+# collector; an absent bias stays unknown, and the difference from the decision remains explicitly unassigned.
+#
+# This module aggregates already measured rows. It does not load a checkpoint or certify that its identity describes the
+# weights used by the collector. The collector must establish that independently, including the decision check.
+# --------------------------------------------------------------------------------------------------------------------
+
+
+# The partition check's absolute floor, by the precision the edges were computed in. Each partition and edge_total are
+# separate sums of the same edges, so they differ by that precision's rounding, and a floor below it refuses a correct
+# measurement. In float32 the gap measured flat over the 5,130 partitions of a GPU replay of all 190 RTE validation
+# rows (median 1.2e-5, max 2.3e-5); 5e-5 clears it while a 1e-3 mismatch still fails. No other precision has a measured
+# floor, so a caller states one explicitly.
+PARTITION_ATOL = {"float32": 5e-5}
+
+
+@dataclass(frozen=True)
+class SparseAttributionRow:
+    """One prompt's raw signed contributions, before normalization.
+
+    Feature coordinates are ``(layer, position, feature)``. Error edges are layer by position, embedding edges are
+    position, and head edges are reported layer by head. ``edge_total`` is the shared total every reported attention
+    layer partitions with its bypass. ``bias`` is optional measured evidence, never inferred from a remainder.
+    """
+
+    row_id: str
+    checkpoint_sha256: str
+    basis_id: str
+    decision: float
+    answer_position: int
+    feature_nodes: Sequence[tuple[int, int, int]]
+    feature_edges: Sequence[float]
+    error_edges: Sequence[Sequence[float]]
+    embedding_edges: Sequence[float]
+    head_layers: Sequence[int]
+    head_edges: Sequence[Sequence[float]]
+    bypass_edges: Sequence[float]
+    edge_total: float
+    bias: float | None = None
+    freeze_attention: bool = True
+    freeze_norms: bool = True
+
+
+def _finite(value: float, name: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be finite, got {number}")
+    return number
+
+
+def _index(value: int, size: int, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value < size:
+        raise ValueError(f"{name} must be an integer in [0, {size}), got {value!r}")
+    return value
+
+
+def _report_metadata(
+    checkpoint_sha256: str,
+    basis_id: str,
+    model_id: str,
+    model_revision: str,
+    target_token_ids: tuple[int, int],
+    top_k: int,
+    measurement_dtype: str,
+    partition_atol: float | None,
+    partition_rtol: float,
+) -> tuple[float, float]:
+    if len(checkpoint_sha256) != 64 or any(c not in "0123456789abcdef" for c in checkpoint_sha256):
+        raise ValueError("checkpoint_sha256 must be a lowercase SHA256 digest")
+    if not all(isinstance(v, str) and v.strip() for v in (basis_id, model_id, model_revision)):
+        raise ValueError("basis_id, model_id and model_revision must be stated")
+    if len(target_token_ids) != 2 or any(type(v) is not int or v < 0 for v in target_token_ids):
+        raise ValueError("target_token_ids must name two nonnegative token ids")
+    if target_token_ids[0] == target_token_ids[1]:
+        raise ValueError("target_token_ids must name distinct positive and negative targets")
+    if type(top_k) is not int or top_k < 1:
+        raise ValueError("top_k must be a positive integer")
+    if not isinstance(measurement_dtype, str) or not measurement_dtype.strip():
+        raise ValueError("measurement_dtype must name the precision the edges were computed in")
+    if partition_atol is None:
+        if measurement_dtype not in PARTITION_ATOL:
+            raise ValueError(
+                f"no measured partition_atol for measurement_dtype {measurement_dtype!r} (measured: "
+                f"{sorted(PARTITION_ATOL)}); state one explicitly"
+            )
+        partition_atol = PARTITION_ATOL[measurement_dtype]
+    atol, rtol = _finite(partition_atol, "partition_atol"), _finite(partition_rtol, "partition_rtol")
+    if atol < 0 or rtol < 0:
+        raise ValueError("partition tolerances must be nonnegative")
+    return atol, rtol
+
+
+def _row_identity(
+    row: SparseAttributionRow,
+    checkpoint_sha256: str,
+    basis_id: str,
+    bias_known: bool,
+    seen: set[str],
+) -> None:
+    if not row.row_id or row.row_id in seen:
+        raise ValueError(f"row_id must be nonempty and unique, got {row.row_id!r}")
+    if row.checkpoint_sha256 != checkpoint_sha256 or row.basis_id != basis_id:
+        raise ValueError(f"row {row.row_id!r} has a different checkpoint or basis")
+    if (row.bias is not None) != bias_known:
+        raise ValueError("all rows must either measure bias or leave it unknown")
+    if type(row.freeze_attention) is not bool or type(row.freeze_norms) is not bool:
+        raise ValueError("each row must record boolean freeze_attention and freeze_norms")
+
+
+def _row_layout(row: SparseAttributionRow, n_layers: int, layers: tuple[int, ...], n_heads: int) -> None:
+    n_pos = len(row.embedding_edges)
+    if len(row.error_edges) != n_layers or not n_pos:
+        raise ValueError(f"row {row.row_id!r} has different model dimensions")
+    if any(len(part) != n_pos for part in row.error_edges):
+        raise ValueError(f"row {row.row_id!r} has an incomplete error-node layout")
+    if tuple(row.head_layers) != layers or len(row.head_edges) != len(layers):
+        raise ValueError(f"row {row.row_id!r} has different head layers")
+    if len(row.bypass_edges) != len(layers) or any(len(part) != n_heads for part in row.head_edges):
+        raise ValueError(f"row {row.row_id!r} has an incomplete head/bypass layout")
+    if len(row.feature_nodes) != len(row.feature_edges) or len(set(row.feature_nodes)) != len(row.feature_nodes):
+        raise ValueError(f"row {row.row_id!r} needs one edge per distinct feature coordinate")
+    _index(row.answer_position, n_pos, "answer position")
+    for layer, position, feature in row.feature_nodes:
+        _index(layer, n_layers, "feature layer")
+        _index(position, n_pos, "feature position")
+        if type(feature) is not int or feature < 0:
+            raise ValueError(f"feature id must be a nonnegative integer, got {feature!r}")
+
+
+def _decision(row: SparseAttributionRow) -> float:
+    decision = _finite(row.decision, "decision")
+    if decision == 0.0:
+        raise ValueError(f"row {row.row_id!r} has zero decision, so its alignment is undefined")
+    return decision
+
+
+def _partition_error(
+    row: SparseAttributionRow,
+    source_total: float,
+    edge_total: float,
+    row_heads: list[list[float]],
+    row_bypass: list[float],
+    atol: float,
+    rtol: float,
+) -> float:
+    totals = [source_total, *(math.fsum((*part, rest)) for part, rest in zip(row_heads, row_bypass))]
+    for total in totals:
+        if not math.isclose(total, edge_total, abs_tol=atol, rel_tol=rtol):
+            raise ValueError(f"row {row.row_id!r}: partition {total} does not match edge_total {edge_total}")
+    return max(abs(total - edge_total) for total in totals)
+
+
+def checkpoint_attribution_report(
+    rows: Sequence[SparseAttributionRow],
+    *,
+    checkpoint_sha256: str,
+    basis_id: str,
+    model_id: str,
+    model_revision: str,
+    target_token_ids: tuple[int, int],
+    measurement_dtype: str,
+    top_k: int = 10,
+    partition_atol: float | None = None,
+    partition_rtol: float = 1e-5,
+) -> dict[str, Any]:
+    """Summarize measured rows for one checkpoint and basis, refusing incomplete or incompatible partitions.
+
+    The target is the first token's logit minus the second's. Top answer-position features are ranked by the
+    magnitude of their aggregated signed share, so opposing features remain visible. The output is JSON-compatible;
+    an unknown bias is ``None``. It reports the head layers it actually received and whether they cover the model.
+    ``measurement_dtype`` names the precision the edges were computed in; it selects the partition check's absolute
+    floor from ``PARTITION_ATOL`` unless ``partition_atol`` is given, and both are recorded in the report.
+    """
+    atol, rtol = _report_metadata(
+        checkpoint_sha256,
+        basis_id,
+        model_id,
+        model_revision,
+        target_token_ids,
+        top_k,
+        measurement_dtype,
+        partition_atol,
+        partition_rtol,
+    )
+    if not rows:
+        raise ValueError("a checkpoint report needs at least one measured row")
+
+    reference = rows[0]
+    n_layers = len(reference.error_edges)
+    n_pos = len(reference.embedding_edges)
+    layers = tuple(reference.head_layers)
+    n_heads = len(reference.head_edges[0]) if reference.head_edges else 0
+    if not n_layers or not n_pos or not layers or not n_heads or len(set(layers)) != len(layers):
+        raise ValueError("nonempty source and head dimensions, with distinct head layers, are required")
+    for layer in layers:
+        _index(layer, n_layers, "head layer")
+    bias_known = reference.bias is not None
+    seen: set[str] = set()
+    denominator = 0.0
+    source_sums = dict.fromkeys(("features", "errors", "embeddings", "bias", "unassigned"), 0.0)
+    feature_layers = [0.0] * n_layers
+    error_layers = [0.0] * n_layers
+    heads = [[0.0] * n_heads for _ in layers]
+    bypass = [0.0] * len(layers)
+    answer_features: dict[tuple[int, int], float] = {}
+    max_partition_error = 0.0
+    item_records = []
+
+    for row in rows:
+        _row_identity(row, checkpoint_sha256, basis_id, bias_known, seen)
+        if (row.freeze_attention, row.freeze_norms) != (reference.freeze_attention, reference.freeze_norms):
+            raise ValueError("all rows must use the same attribution regime")
+        _row_layout(row, n_layers, layers, n_heads)
+        decision = _decision(row)
+        sign = 1.0 if decision > 0 else -1.0
+        edge_total = _finite(row.edge_total, "edge_total")
+        features = [_finite(v, "feature edge") for v in row.feature_edges]
+        errors = [[_finite(v, "error edge") for v in part] for part in row.error_edges]
+        embeddings = [_finite(v, "embedding edge") for v in row.embedding_edges]
+        row_heads = [[_finite(v, "head edge") for v in part] for part in row.head_edges]
+        row_bypass = [_finite(v, "bypass edge") for v in row.bypass_edges]
+        bias = _finite(row.bias, "bias") if row.bias is not None else 0.0
+        source_total = math.fsum((*features, *(v for part in errors for v in part), *embeddings))
+        max_partition_error = max(
+            max_partition_error, _partition_error(row, source_total, edge_total, row_heads, row_bypass, atol, rtol)
+        )
+        for (layer, position, feature), edge in zip(row.feature_nodes, features):
+            feature_layers[layer] += sign * edge
+            if position == row.answer_position:
+                key = (layer, feature)
+                answer_features[key] = answer_features.get(key, 0.0) + sign * edge
+        for layer, part in enumerate(errors):
+            error_layers[layer] += sign * math.fsum(part)
+        for i, part in enumerate(row_heads):
+            for head, value in enumerate(part):
+                heads[i][head] += sign * value
+            bypass[i] += sign * row_bypass[i]
+        source_sums["features"] += sign * math.fsum(features)
+        source_sums["errors"] += sign * math.fsum(v for part in errors for v in part)
+        source_sums["embeddings"] += sign * math.fsum(embeddings)
+        source_sums["bias"] += sign * bias
+        source_sums["unassigned"] += sign * (decision - source_total - bias)
+        denominator += abs(decision)
+        item_records.append({"row_id": row.row_id, "decision": decision, "edge_total": edge_total})
+        seen.add(row.row_id)
+
+    top = sorted(answer_features, key=lambda key: (-abs(answer_features[key]), key))[:top_k]
+    result = {
+        "format": "interpretune.sparse-attribution-report/1",
+        "checkpoint_sha256": checkpoint_sha256,
+        "basis_id": basis_id,
+        "model_id": model_id,
+        "model_revision": model_revision,
+        "target_token_ids": list(target_token_ids),
+        "attribution_regime": {
+            "freeze_attention": reference.freeze_attention,
+            "freeze_norms": reference.freeze_norms,
+        },
+        "items": len(rows),
+        "normalization": "decision_aligned_ratio_of_sums",
+        "sum_abs_decision": denominator,
+        "source_shares": {k: v / denominator if k != "bias" or bias_known else None for k, v in source_sums.items()},
+        "feature_shares_by_layer": [v / denominator for v in feature_layers],
+        "error_shares_by_layer": [v / denominator for v in error_layers],
+        "head_layers": list(layers),
+        "complete_head_layers": set(layers) == set(range(n_layers)),
+        "head_shares": [[v / denominator for v in part] for part in heads],
+        "bypass_shares": [v / denominator for v in bypass],
+        "top_answer_features": [
+            {"layer": layer, "feature": feature, "share": answer_features[layer, feature] / denominator}
+            for layer, feature in top
+        ],
+        "max_partition_error": max_partition_error,
+        "measurement_dtype": measurement_dtype,
+        "partition_atol": atol,
+        "partition_rtol": rtol,
+        "rows": item_records,
+    }
+    json.dumps(result, allow_nan=False)
+    return result
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# Sparse attribution: sparse_attribution_collect
+# Convert public head-loading measurements into checkpoint report rows.
+#
+# The decision must be measured independently from logits on the selected checkpoint. Head loadings supply the source
+# edges, which need not sum to that decision. This conversion neither restores nor verifies checkpoint weights; those
+# checks belong to the checkpoint collector before it calls this function.
+# --------------------------------------------------------------------------------------------------------------------
+
+
+def _basis_layer_identity(tc: Any, layer: int) -> list[Any]:
+    from circuit_tracer.transcoder import SingleLayerTranscoder
+    from circuit_tracer.transcoder.activation_functions import JumpReLU
+
+    if type(tc) is not SingleLayerTranscoder or tc.layer_idx != layer or tc.lazy_encoder or tc.lazy_decoder:
+        raise ValueError(f"basis layer {layer} must be a materialized SingleLayerTranscoder in layer order")
+    if type(tc.activation_function) is not JumpReLU:
+        raise ValueError(
+            f"basis layer {layer} requires supported JumpReLU; got {type(tc.activation_function).__name__}"
+        )
+    bandwidth = float(tc.activation_function.bandwidth)
+    if not math.isfinite(bandwidth) or bandwidth <= 0:
+        raise ValueError(f"basis layer {layer} has invalid JumpReLU bandwidth")
+    return [tc.d_model, tc.d_transcoder, bandwidth, tc.W_skip is not None]
+
+
+def _basis_conventions(basis: Any, zero: Any) -> tuple[list[str], list[int | None]]:
+    if not isinstance(zero, slice) or any(
+        type(v) is not int and v is not None for v in (zero.start, zero.stop, zero.step)
+    ):
+        raise ValueError("basis fingerprinting requires an explicit integer zero-position slice")
+    hooks = [basis.feature_input_hook, basis.feature_output_hook]
+    if any(not isinstance(hook, str) or not hook for hook in hooks):
+        raise ValueError("basis fingerprinting requires the feature input and output hooks")
+    return hooks, [zero.start, zero.stop, zero.step]
+
+
+def transcoder_basis_id(replacement_model: Any) -> str:
+    """Fingerprint the actual per-layer JumpReLU basis, hooks and zero-position convention used for measurement.
+
+    Names of Hub repositories are not evidence of loaded tensor contents. This hashes every transcoder parameter and
+    buffer, including thresholds, and the non-tensor settings that change its feature basis. Lazy, cross-layer and
+    unfamiliar activation implementations are refused until their identity can be recorded completely.
+    """
+    from circuit_tracer.transcoder import TranscoderSet
+    from nnsight import Envoy
+
+    basis = replacement_model.transcoders
+    if isinstance(basis, Envoy):
+        basis = basis._module
+    if type(basis) is not TranscoderSet or len(basis) != replacement_model.cfg.n_layers:
+        raise ValueError("basis fingerprinting requires one TranscoderSet layer per model layer")
+    hooks, zero = _basis_conventions(basis, replacement_model.zero_positions)
+    layers = [_basis_layer_identity(tc, layer) for layer, tc in enumerate(basis)]
+    identity = {
+        "format": "interpretune.transcoder-basis/1",
+        "state_sha256": tensor_state_sha256(basis.state_dict()),
+        "feature_hooks": hooks,
+        "zero_positions": zero,
+        "layers": layers,
+    }
+    return "sha256:" + hashlib.sha256(json.dumps(identity, sort_keys=True, allow_nan=False).encode()).hexdigest()
+
+
+def head_loading_row(
+    report: Mapping[str, Any],
+    *,
+    row_id: str,
+    checkpoint_sha256: str,
+    basis_id: str,
+    decision: float,
+    answer_position: int,
+) -> SparseAttributionRow:
+    """Retain the raw source coordinates, head partitions and measured regime of one public op result.
+
+    No bias measurement is exposed by head loadings, so bias remains unknown. The checkpoint report validates layout,
+    finite numbers and source/head partition sums when it aggregates the rows.
+    """
+    regime = json.loads(report["head_loading_regime_json"])
+    if not isinstance(regime, dict) or set(regime) != {"freeze_attention", "freeze_norms"}:
+        raise ValueError("head-loading regime must record freeze_attention and freeze_norms")
+    if any(type(value) is not bool for value in regime.values()):
+        raise ValueError("head-loading regime must contain boolean freeze flags")
+    return SparseAttributionRow(
+        row_id=row_id,
+        checkpoint_sha256=checkpoint_sha256,
+        basis_id=basis_id,
+        decision=decision,
+        answer_position=answer_position,
+        feature_nodes=[tuple(node) for node in report["head_loading_feature_nodes"].tolist()],
+        feature_edges=report["head_loading_feature_edges"].tolist(),
+        error_edges=report["head_loading_error_edges"].tolist(),
+        embedding_edges=report["head_loading_embedding_edges"].tolist(),
+        head_layers=report["head_loading_layers"].tolist(),
+        head_edges=report["head_loading_head_edges"].tolist(),
+        bypass_edges=report["head_loading_bypass_edges"].tolist(),
+        edge_total=float(report["head_loading_total"]),
+        freeze_attention=regime["freeze_attention"],
+        freeze_norms=regime["freeze_norms"],
+    )
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# Sparse attribution: sparse_attribution_checkpoint
+# Bind attribution reports to the actual model selected after the tuning scheduler's terminal gates.
+#
+# A checkpoint policy's best path can still name a rejected candidate after a veto. The callback saves the live selected
+# state after FTSCoreCallback ends training, then checks all checkpoint tensors against the view before and after
+# measurement. A measurement driver must independently check its reconstructed model's logits and basis; this module
+# proves the selected training state and exact validation coverage, not the driver's reconstruction.
+# --------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class VerifiedAttributionCheckpoint:
+    """A checkpoint file whose complete tensor state matches the selected training view."""
+
+    path: Path
+    sha256: str
+    state_sha256: str
+    state_keys: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CheckpointMeasurements:
+    """A driver's measurements and the complete validation identity set it was asked to measure."""
+
+    rows: Sequence[SparseAttributionRow]
+    expected_row_ids: Sequence[str]
+    basis_id: str
+    model_id: str
+    model_revision: str
+    target_token_ids: tuple[int, int]
+    measurement_dtype: str
+    checks: Mapping[str, Any] = field(default_factory=dict)
+
+
+def tensor_state_sha256(state: Mapping[str, Any]) -> str:
+    """Hash every named tensor's key, dtype, shape and bytes, independent of mapping order or device.
+
+    Dense, materialized tensors are required. Unsupported layouts and non-tensor state are refused rather than omitted,
+    because a digest of only part of the model would not identify its selected state.
+    """
+    import torch
+
+    if not state or any(not isinstance(name, str) or not name for name in state):
+        raise ValueError("selected state must contain nonempty tensor names")
+    digest = hashlib.sha256()
+    for name in sorted(state):
+        tensor = state[name]
+        if (
+            not isinstance(tensor, torch.Tensor)
+            or tensor.layout != torch.strided
+            or tensor.is_quantized
+            or tensor.device.type == "meta"
+        ):
+            raise ValueError(f"selected state tensor {name!r} must be dense and materialized")
+        header = json.dumps([name, str(tensor.dtype), list(tensor.shape)], separators=(",", ":")).encode()
+        digest.update(len(header).to_bytes(8, "big"))
+        digest.update(header)
+        raw = tensor.detach().cpu().contiguous().reshape(-1).view(torch.uint8)
+        digest.update(memoryview(raw.numpy()))
+    return digest.hexdigest()
+
+
+def verify_attribution_checkpoint(path: str | Path, selected_state: Mapping[str, Any]) -> VerifiedAttributionCheckpoint:
+    """Verify a complete, unsharded FTS checkpoint against the actual selected view, without restoring anything.
+
+    Scheduled-only checkpoints cannot prove the unscheduled base and are refused. Callers supply
+    ``tuning_scheduler.view.checkpoint_state_dict()`` so fitted tensors are included and artifacts are excluded by
+    the same view that wrote the checkpoint. These are trusted local training checkpoints, read with FTS's loader.
+    """
+    from finetuning_scheduler.core.checkpoint import load_payload
+
+    path = Path(path)
+    if not path.is_file():
+        raise ValueError(f"attribution checkpoint must be an unsharded file, got {path}")
+    with path.open("rb") as stream:
+        file_sha = hashlib.file_digest(stream, "sha256").hexdigest()
+    payload = load_payload(path)
+    if payload.get("version") != 1 or payload.get("sharded") is not False or payload.get("include") != "all":
+        raise ValueError("attribution needs a version-1, unsharded FTS checkpoint with include='all'")
+    saved = payload.get("model")
+    if not isinstance(saved, Mapping) or set(saved) != set(selected_state):
+        raise ValueError("checkpoint and selected state have different tensor keys")
+    selected_sha = tensor_state_sha256(selected_state)
+    if tensor_state_sha256(saved) != selected_sha:
+        raise ValueError("checkpoint tensors do not match the selected model state")
+    with path.open("rb") as stream:
+        if hashlib.file_digest(stream, "sha256").hexdigest() != file_sha:
+            raise ValueError("attribution checkpoint changed while it was verified")
+    return VerifiedAttributionCheckpoint(path, file_sha, selected_sha, tuple(sorted(saved)))
+
+
+def _complete_validation_coverage(measurements: CheckpointMeasurements) -> list[str]:
+    expected = list(measurements.expected_row_ids)
+    actual = [row.row_id for row in measurements.rows]
+    if not expected or any(not isinstance(row_id, str) or not row_id for row_id in expected):
+        raise ValueError("expected validation row ids must be nonempty strings")
+    if len(set(expected)) != len(expected) or len(set(actual)) != len(actual) or set(actual) != set(expected):
+        raise ValueError("measured rows must match the complete expected validation identity set exactly")
+    return expected
+
+
+def _report_summary(report: Mapping[str, Any], destination: Path) -> str:
+    source = report["source_shares"]
+    heads = [
+        (layer, head, value)
+        for layer, values in zip(report["head_layers"], report["head_shares"])
+        for head, value in enumerate(values)
+    ]
+    largest = max(heads, key=lambda entry: abs(entry[2]), default=None)
+    head = f"largest head L{largest[0]} H{largest[1]} {largest[2]:+.4f}" if largest else "no measured heads"
+    features = report["top_answer_features"]
+    top = (
+        f"top answer feature L{features[0]['layer']} F{features[0]['feature']} {features[0]['share']:+.4f}"
+        if features
+        else "no active answer features"
+    )
+    bias = "unmeasured" if source["bias"] is None else f"{source['bias']:+.4f}"
+    return (
+        f"Selected-checkpoint attribution: {report['items']} validation items; "
+        f"feature share {source['features']:+.4f}, error share {source['errors']:+.4f}, "
+        f"embedding share {source['embeddings']:+.4f}, bias {bias}, unassigned {source['unassigned']:+.4f}; "
+        f"{head}; {top}; {destination}"
+    )
+
+
+class SparseAttributionReportCallback:
+    """Save and report the live selected checkpoint after FTSCoreCallback's final restore and gates.
+
+    Args:
+        collector: A callable, or a ``class_path`` mapping constructing one. It receives the training module and a
+            verified checkpoint and returns CheckpointMeasurements. Its responsibilities include reconstructing the
+            measurement model, checking its logits against the selected training model, and identifying the actual
+            transcoder basis. A repeated checkpoint hash in its rows is not reconstruction evidence.
+        output_dir: Parent for a separate checkpoint/report directory per completed run. The selected checkpoint is
+            a full FTS checkpoint with optimizer state. Publication follows successful collection and verification.
+        top_k: Answer-position features retained in the aggregate report.
+
+    The callback must follow exactly one FTSCoreCallback. Only single-process, unsharded runs with a complete
+    checkpoint view are supported. ``module.sparse_attribution_report_path`` names the JSON after it is published.
+    """
+
+    def __init__(
+        self,
+        collector: Callable[[Any, VerifiedAttributionCheckpoint], CheckpointMeasurements] | Mapping[str, Any],
+        output_dir: str = "reports/sparse_attribution",
+        top_k: int = 10,
+    ) -> None:
+        if isinstance(collector, Mapping):
+            from interpretune.hub.entrypoints import instantiate_hub_aware_class
+
+            collector = instantiate_hub_aware_class(dict(collector))
+        if not callable(collector):
+            raise ValueError("attribution collector must be callable")
+        if type(top_k) is not int or top_k < 1:
+            raise ValueError("top_k must be a positive integer")
+        self.collector = collector
+        self.output_dir = Path(output_dir)
+        self.top_k = top_k
+        self._fts: Any = None
+
+    def on_train_start(self, ctx: Any) -> None:
+        """Check callback order before training, and refuse distributed collection until it is supported."""
+        from interpretune.tuning.core_loop import FTSCoreCallback
+
+        callbacks = list(ctx.callbacks)
+        matches = [cb for cb in callbacks if isinstance(cb, FTSCoreCallback)]
+        if len(matches) != 1 or self not in callbacks or callbacks.index(matches[0]) >= callbacks.index(self):
+            raise ValueError("SparseAttributionReportCallback must follow exactly one FTSCoreCallback")
+        if ctx.dist_run is not None:
+            raise ValueError("sparse attribution reports currently require a single-process unsharded run")
+        self._fts = matches[0]
+        ctx.module.sparse_attribution_report_path = None
+
+    def on_train_end(self, ctx: Any) -> None:
+        """Save the post-gate subject, measure it, recheck state identity, then atomically publish its report."""
+        scheduler = self._fts.tuning_scheduler if self._fts is not None else None
+        if scheduler is None or not scheduler.state_dict().get("finished"):
+            raise ValueError("attribution reporting requires FTSCoreCallback to finish its terminal gates first")
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        run_dir = Path(tempfile.mkdtemp(prefix="selected-", dir=self.output_dir))
+        checkpoint = Path(scheduler.save(str(run_dir / "checkpoint.pt")))
+        verified = verify_attribution_checkpoint(checkpoint, scheduler.view.checkpoint_state_dict())
+        measurements = self.collector(ctx.module, verified)
+        expected = _complete_validation_coverage(measurements)
+        report = checkpoint_attribution_report(
+            measurements.rows,
+            checkpoint_sha256=verified.sha256,
+            basis_id=measurements.basis_id,
+            model_id=measurements.model_id,
+            model_revision=measurements.model_revision,
+            target_token_ids=measurements.target_token_ids,
+            measurement_dtype=measurements.measurement_dtype,
+            top_k=self.top_k,
+        )
+        if verify_attribution_checkpoint(checkpoint, scheduler.view.checkpoint_state_dict()) != verified:
+            raise ValueError("selected attribution checkpoint changed during measurement")
+        report["checkpoint_state_sha256"] = verified.state_sha256
+        report["checkpoint_tensor_count"] = len(verified.state_keys)
+        report["validation_row_ids"] = expected
+        report["validation_coverage_verified"] = True
+        report["checkpoint_selection"] = "live_after_terminal_gates"
+        report["gate_records"] = scheduler.gate_records
+        report["measurement_checks"] = dict(measurements.checks)
+        payload = json.dumps(report, indent=2, allow_nan=False) + "\n"
+        destination = run_dir / "attribution.json"
+        pending = run_dir / "attribution.json.tmp"
+        pending.write_text(payload, encoding="utf-8")
+        pending.replace(destination)
+        ctx.module.sparse_attribution_report_path = str(destination)
+        from interpretune.utils import rank_zero_info
+
+        rank_zero_info(_report_summary(report, destination))
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# Sparse attribution: rte_sparse_attribution
+# Measure a sparse RTE run's full validation set against a verified selected checkpoint.
+#
+# The measurement factory must yield an Interpretune module exposing the public head-attribution technique. It must
+# preserve the selected model's behavior, including active fitted enforcement. The collector checks the reconstructed HF
+# weights and both answer logits before accepting any attribution row; exporting bare weights is not sufficient.
+# --------------------------------------------------------------------------------------------------------------------
+
+
+def _check_selected_subject(module: Any, checkpoint: VerifiedAttributionCheckpoint) -> None:
+    state = module.state_dict()
+    if not set(checkpoint.state_keys).issubset(state):
+        raise ValueError("RTE collection requires checkpoint keys matching the selected module's physical state")
+    selected = {name: state[name] for name in checkpoint.state_keys}
+    if tensor_state_sha256(selected) != checkpoint.state_sha256:
+        raise ValueError("RTE module tensors do not match the verified selected checkpoint")
+
+
+def _validation_items(module: Any) -> dict[str, Any]:
+    import torch
+
+    items = {}
+    for item in module.datamodule.dataset["validation"]:
+        missing = {"idx", "input_ids", "attention_mask"} - item.keys()
+        if missing:
+            raise ValueError(f"validation rows must retain required columns: missing {sorted(missing)}")
+        identity = item["idx"]
+        if type(identity) not in (int, str) or not str(identity) or str(identity) in items:
+            raise ValueError(f"validation idx must be a distinct integer or string, got {identity!r}")
+        ids, mask = torch.as_tensor(item["input_ids"]), torch.as_tensor(item["attention_mask"])
+        if ids.ndim != 1 or ids.dtype != torch.int64 or mask.shape != ids.shape:
+            raise ValueError(f"validation row {identity!r} needs one int64 token sequence and matching attention mask")
+        if not ((mask == 0) | (mask == 1)).all() or not mask.any():
+            raise ValueError(f"validation row {identity!r} needs a nonempty binary attention mask")
+        positions = mask.bool().nonzero().flatten()
+        if int(positions[-1] - positions[0]) + 1 != len(positions):
+            raise ValueError(f"validation row {identity!r} has internal padding, which cannot be stripped safely")
+        items[str(identity)] = ids[mask.bool()].detach().cpu()
+    if not items:
+        raise ValueError("sparse attribution requires a nonempty validation set")
+    return items
+
+
+@contextmanager
+def _reference_inference(module: Any) -> Iterator[None]:
+    """Retain every module's mode and the sparse forward's temporary caches, including on a failed measurement."""
+    modes = [(child, child.training) for child in module.modules()]
+    saved, mask = module._sparse_saved, module._sparse_mask
+    module._sparse_saved = {}
+    module.eval()
+    try:
+        yield
+    finally:
+        module._sparse_saved = saved
+        module._sparse_mask = mask
+        for child, training in modes:
+            child.training = training
+
+
+def _target_tokens(module: Any) -> tuple[int, int]:
+    import torch
+
+    ids = torch.as_tensor(module.it_cfg.entailment_mapping_indices)
+    if ids.dtype not in (torch.int32, torch.int64) or ids.shape != (2,):
+        raise ValueError("entailment_mapping_indices must contain two integer token ids")
+    positive, negative = ids.tolist()
+    if min(positive, negative) < 0 or positive == negative:
+        raise ValueError("entailment_mapping_indices must contain distinct nonnegative token ids")
+    return positive, negative
+
+
+def _reference_logits(module: Any, items: Mapping[str, Any]) -> dict[str, Any]:
+    import torch
+
+    device = next(module.model.parameters()).device
+    reference = {}
+    with _reference_inference(module), torch.no_grad():
+        for row_id, ids in items.items():
+            inputs = ids.to(device)[None]
+            pair, _ = module.sparse_forward({"input_ids": inputs, "attention_mask": torch.ones_like(inputs)})
+            if pair.shape != (1, 2) or not torch.isfinite(pair).all():
+                raise ValueError(f"validation row {row_id!r} did not produce two finite answer logits")
+            reference[row_id] = pair[0].detach().float().cpu()
+            module._sparse_saved.clear()
+    return reference
+
+
+def _decision_target(model: Any, targets: tuple[int, int]) -> Any:
+    from circuit_tracer.attribution.targets import CustomTarget
+
+    config = model._module.config.get_text_config()
+    if getattr(config, "final_logit_softcapping", None) is not None:
+        raise ValueError("RTE logit-gap attribution does not yet support final_logit_softcapping")
+    unembed = model._module.get_output_embeddings().weight.detach()
+    if unembed.shape != (model.cfg.d_vocab, model.cfg.d_model) or max(targets) >= unembed.shape[0]:
+        raise ValueError("RTE answer tokens require a vocabulary-by-model unembedding weight")
+    return CustomTarget("logit_gap", 1.0, unembed[targets[0]] - unembed[targets[1]])
+
+
+def _measurement_hf_state(model: Any) -> dict[str, Any]:
+    """Separate the known registered transcoder child from HF weights; the basis is verified independently."""
+    from nnsight import Envoy
+
+    basis = model.transcoders
+    if isinstance(basis, Envoy):
+        basis = basis._module
+    if model._module.get_submodule("transcoders") is not basis:
+        raise ValueError("measurement model does not register its verified basis under the expected transcoders child")
+    state = model._module.state_dict()
+    artifact_keys = {f"transcoders.{name}" for name in basis.state_dict()}
+    if not artifact_keys or not artifact_keys.issubset(state):
+        raise ValueError("measurement model has an incomplete registered transcoder state")
+    return {name: value for name, value in state.items() if name not in artifact_keys}
+
+
+def _measurement_dtype(state: Mapping[str, Any]) -> str:
+    """The one floating precision of the measured HF weights, which the attribution edges are computed in."""
+    dtypes = {str(tensor.dtype).removeprefix("torch.") for tensor in state.values() if tensor.is_floating_point()}
+    if len(dtypes) != 1:
+        raise ValueError(f"measurement HF weights must share one floating precision, got {sorted(dtypes)}")
+    return dtypes.pop()
+
+
+def _model_provenance(module: Any) -> tuple[str, str]:
+    config = module.it_cfg
+    model_id = getattr(config, "model_name_or_path", None)
+    loader = getattr(config, "hf_from_pretrained_cfg", None)
+    arguments = getattr(loader, "pretrained_kwargs", None)
+    revision = arguments.get("revision") if isinstance(arguments, Mapping) else None
+    if not isinstance(model_id, str) or not model_id.strip():
+        raise ValueError("RTE attribution requires the selected module's HF model_name_or_path")
+    if not isinstance(revision, str) or re.fullmatch(r"[0-9a-f]{40}", revision) is None:
+        raise ValueError("RTE attribution requires an immutable 40-character HF-loader revision pin")
+    return model_id, revision
+
+
+class RteSparseAttributionCollector:
+    """Collect the selected sparse RTE model's head/source measurements over its complete validation set.
+
+    Args:
+        measurement_factory: A callable or ``class_path`` mapping. Called with the training module and verified
+            checkpoint, it returns a context manager yielding a module for ``it.head_loadings``. The yielded
+            module's replacement model must preserve the selected HF weights and any fitted enforcement. No
+            default factory silently replaces an enforced run with its bare weights.
+        logit_atol: Absolute tolerance when comparing both reconstructed answer logits with the selected run.
+        logit_rtol: Relative tolerance for that comparison. The default is for float32 CPU/GPU measurement.
+
+    Model identity comes from the selected module's HF load configuration, which must pin ``revision`` to a full
+    commit hash. It is not inferred from a moving Hub branch or a separate caller-supplied label. The context manager
+    owns construction, device placement and cleanup. This collector never switches enforcement
+    off, samples the validation set, changes the target, or treats matching version strings as weight evidence.
+    """
+
+    def __init__(
+        self,
+        measurement_factory: Callable[[Any, VerifiedAttributionCheckpoint], AbstractContextManager[Any]]
+        | Mapping[str, Any],
+        logit_atol: float = 1e-5,
+        logit_rtol: float = 1e-5,
+    ) -> None:
+        if isinstance(measurement_factory, Mapping):
+            from interpretune.hub.entrypoints import instantiate_hub_aware_class
+
+            measurement_factory = instantiate_hub_aware_class(dict(measurement_factory))
+        if not callable(measurement_factory):
+            raise ValueError("measurement_factory must return a context manager for the selected model")
+        if any(not math.isfinite(value) or value < 0 for value in (logit_atol, logit_rtol)):
+            raise ValueError("logit tolerances must be finite and nonnegative")
+        self.measurement_factory = measurement_factory
+        self.logit_atol, self.logit_rtol = logit_atol, logit_rtol
+
+    def __call__(self, module: Any, checkpoint: VerifiedAttributionCheckpoint) -> CheckpointMeasurements:
+        """Verify the reconstruction before accepting its attribution rows, then recheck its basis and weights."""
+        import torch
+        from transformers import BatchEncoding
+        import interpretune as it
+        import interpretune.analysis
+        from interpretune.analysis.ops.base import AnalysisBatch
+
+        _check_selected_subject(module, checkpoint)
+        model_id, revision = _model_provenance(module)
+        items = _validation_items(module)
+        targets = _target_tokens(module)
+        enforced = module.sparse_enforce
+        if type(enforced) is not bool:
+            raise ValueError("the selected module must state its boolean sparse_enforce mode")
+        weights_sha = tensor_state_sha256(module.model.state_dict())
+        reference = _reference_logits(module, items)
+        rows = []
+        max_logit_error = 0.0
+        with self.measurement_factory(module, checkpoint) as measurement:
+            model = measurement.replacement_model
+            backend = getattr(model, "backend", None)
+            if backend != "nnsight":
+                raise ValueError(f"RTE checkpoint collection requires the nnsight backend, got {backend!r}")
+            basis = transcoder_basis_id(model)
+            measured_state = _measurement_hf_state(model)
+            if tensor_state_sha256(measured_state) != weights_sha:
+                raise ValueError("measurement HF weights do not match the selected training model")
+            measurement_dtype = _measurement_dtype(measured_state)
+            target = _decision_target(model, targets)
+            for row_id, ids in items.items():
+                with torch.no_grad():
+                    logits, _ = model.get_activations(ids.to(model.device))
+                pair = logits[0, -1, list(targets)].detach().float().cpu()
+                if not torch.allclose(pair, reference[row_id], atol=self.logit_atol, rtol=self.logit_rtol):
+                    raise ValueError(
+                        f"validation row {row_id!r}: measurement answer logits {pair.tolist()} do not match selected "
+                        f"logits {reference[row_id].tolist()}; preserve fitted enforcement and model configuration"
+                    )
+                max_logit_error = max(max_logit_error, float((pair - reference[row_id]).abs().max()))
+                raw = it.head_loadings(measurement, AnalysisBatch(), BatchEncoding(), 0, prompt=ids, head_target=target)
+                rows.append(
+                    head_loading_row(
+                        raw,
+                        row_id=row_id,
+                        checkpoint_sha256=checkpoint.sha256,
+                        basis_id=basis,
+                        decision=float(reference[row_id][0] - reference[row_id][1]),
+                        answer_position=len(ids) - 1,
+                    )
+                )
+            if transcoder_basis_id(model) != basis or tensor_state_sha256(_measurement_hf_state(model)) != weights_sha:
+                raise ValueError("measurement basis or HF weights changed during attribution")
+        if module.sparse_enforce != enforced:
+            raise ValueError("the measurement factory changed the selected sparse enforcement mode")
+        if _model_provenance(module) != (model_id, revision):
+            raise ValueError("the selected model provenance changed during attribution")
+        _check_selected_subject(module, checkpoint)
+        return CheckpointMeasurements(
+            rows,
+            list(items),
+            basis,
+            model_id,
+            revision,
+            targets,
+            measurement_dtype,
+            checks={
+                "selected_hf_state_sha256": weights_sha,
+                "validation_inputs_sha256": tensor_state_sha256(items),
+                "max_answer_logit_abs_error": max_logit_error,
+                "logit_atol": self.logit_atol,
+                "logit_rtol": self.logit_rtol,
+                "sparse_enforcement_enabled": enforced,
+            },
+        )
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# Sparse attribution: rte_sparse_measurement
+# Construct head-attribution measurements without dropping the selected RTE run's fitted enforcement.
+# --------------------------------------------------------------------------------------------------------------------
+
+
+def _source_parameter(module: Any) -> Any:
+    import torch
+    from circuit_tracer.utils.tl_nnsight_mapping import get_mapping
+
+    source = module.model
+    parameter = next(source.parameters())
+    if any(p.dtype != torch.float32 or p.device != parameter.device for p in source.parameters()):
+        raise ValueError("RTE head measurement currently requires a single-device float32 selected model")
+    architectures = source.config.architectures
+    if not isinstance(architectures, list) or len(architectures) != 1:
+        raise ValueError("RTE head measurement requires one explicit HF model architecture")
+    get_mapping(architectures[0])
+    return parameter
+
+
+def _full_basis(module: Any, specification: Any) -> Any:
+    from circuit_tracer.transcoder import TranscoderSet
+    from circuit_tracer.utils.hf_utils import load_transcoder_from_hub
+
+    parameter = next(module.model.parameters())
+    if isinstance(specification, str):
+        basis, _ = load_transcoder_from_hub(
+            specification, device=parameter.device, dtype=parameter.dtype, lazy_encoder=False, lazy_decoder=False
+        )
+    else:
+        basis = deepcopy(specification)
+    if type(basis) is not TranscoderSet:
+        raise ValueError("RTE head measurement needs a materialized single-layer TranscoderSet")
+    expected = set(range(module.model.config.get_text_config().num_hidden_layers))
+    if len(basis.transcoders) != len(expected) or len(basis) != len(expected):
+        raise ValueError(f"RTE head measurement needs a basis for every model layer: {sorted(expected)}")
+    for layer, transcoder in enumerate(basis):
+        _basis_layer_identity(transcoder, layer)
+    for layer in module.sparse_cfg["enforce_layers"]:
+        if _basis_layer_identity(basis[layer], layer) != _basis_layer_identity(module.sparse_tcs[str(layer)], layer):
+            raise ValueError(f"measurement basis differs from the fitted enforcement transcoder at layer {layer}")
+        if tensor_state_sha256(basis[layer].state_dict()) != tensor_state_sha256(
+            module.sparse_tcs[str(layer)].state_dict()
+        ):
+            raise ValueError(f"measurement basis differs from the fitted enforcement transcoder at layer {layer}")
+    return basis
+
+
+def _clone_hf_model(module: Any) -> Any:
+    import torch
+    from transformers import AutoModelForCausalLM
+
+    source = module.model
+    parameter = _source_parameter(module)
+    config = deepcopy(source.config)
+    config._attn_implementation = "eager"
+    # Construction does not copy hooks: the sparse hooks below are deliberately installed in a known order.
+    with torch.random.fork_rng(devices=[]), torch.device("cpu"):
+        clone = AutoModelForCausalLM.from_config(config)
+    clone = clone.to(device=parameter.device, dtype=parameter.dtype)
+    clone.load_state_dict(source.state_dict(), strict=True)
+    return clone.eval()
+
+
+def _install_enforcement(module: Any, model: Any, stack: ExitStack) -> None:
+    import torch
+
+    def prepare(_model: Any, args: tuple, kwargs: dict) -> None:
+        ids = kwargs.get("input_ids", args[0] if args else None)
+        if not isinstance(ids, torch.Tensor) or ids.ndim != 2:
+            raise ValueError("RTE head measurement requires batched input_ids, including repeated attribution batches")
+        mask = kwargs.get("attention_mask")
+        if mask is None:
+            mask = torch.ones_like(ids)
+        if mask.shape != ids.shape or not bool((mask == 1).all()):
+            raise ValueError("RTE head measurement expects padding to be stripped before attribution")
+        module._sparse_saved.clear()
+        module._sparse_mask = mask
+        if module.sparse_enforce:
+            module.check_template(ids, mask)
+
+    stack.callback(model.register_forward_pre_hook(prepare, with_kwargs=True).remove)
+    cfg = module.sparse_cfg
+    for layer in sorted(set(cfg["reg_layers"]) | set(cfg["enforce_layers"])):
+        for key in ("x", "out"):
+            site = model.get_submodule(cfg["sites"][key].format(layer=layer))
+            stack.callback(site.register_forward_hook(module._sparse_keep(layer, key)).remove)
+    for layer in cfg["enforce_layers"]:
+        site = model.get_submodule(cfg["sites"]["out"].format(layer=layer))
+        stack.callback(site.register_forward_hook(module._sparse_enforce(layer)).remove)
+
+
+class RteSparseMeasurementFactory:
+    """Yield an analysis component backed by an independent copy of the selected HF weights.
+
+    Args:
+        transcoder_set: A circuit-tracer Hub reference or a materialized ``TranscoderSet`` covering every layer.
+            Its enforced layers must match the selected run's instrument transcoders exactly.
+        zero_positions: Number of leading positions omitted from transcoder features, recorded in the basis id.
+
+    The run's actual sparse hook factories and fitted buffers supply enforcement. Hooks are installed before NNsight
+    wraps the model, so its captured MLP outputs include enforcement. Each repeated attribution forward gets its own
+    attention mask and template check. Source caches, modes, weights and parameter gradients are retained.
+
+    The selected float32 model and the measurement copy coexist on one device. Callers must budget for both models,
+    optimizer state, full transcoders and attribution batches. GPU memory has not been calibrated by this factory.
+    """
+
+    def __init__(self, transcoder_set: Any, zero_positions: int = 1) -> None:
+        if type(zero_positions) is not int or zero_positions < 0:
+            raise ValueError("zero_positions must be a nonnegative integer")
+        self.transcoder_set, self.zero_positions = transcoder_set, zero_positions
+
+    @contextmanager
+    def __call__(self, module: Any, checkpoint: VerifiedAttributionCheckpoint) -> Iterator[Any]:
+        """Build a separate measurement model and release its enforcement hooks even if attribution raises."""
+        from circuit_tracer.replacement_model.replacement_model_nnsight import NNSightReplacementModel
+        from interpretune.adapters.circuit_tracer.backends import DEFAULT_CT_ANALYSIS_BACKEND
+
+        _check_selected_subject(module, checkpoint)
+        _source_parameter(module)
+        basis = _full_basis(module, self.transcoder_set)
+        clone = _clone_hf_model(module)
+        with _reference_inference(module), ExitStack() as hooks:
+            _install_enforcement(module, clone, hooks)
+            replacement = NNSightReplacementModel(
+                clone, tokenizer=module.datamodule.tokenizer, task="text-generation", dispatch=True
+            )
+            replacement.config = clone.config
+            replacement._configure_replacement_model(basis)
+            replacement.zero_positions = slice(0, self.zero_positions)
+            yield SimpleNamespace(replacement_model=replacement, analysis_backend=DEFAULT_CT_ANALYSIS_BACKEND)
+        _check_selected_subject(module, checkpoint)

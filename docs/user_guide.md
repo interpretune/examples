@@ -119,13 +119,17 @@ interpretune --run_command train --config hub://speediedan/rte/runs/rte_ft.gpt2.
 
 A run whose configuration is not cached stops before it starts and names the pull that fetches it.
 
-That run tunes GPT-2 on RTE in phases (finetuning-scheduler, on interpretune's core loop) and fits on a CPU. Each run
-file opens with a comment saying what it runs, on what hardware, and its command line; read them in
-[`components/rte/runs/`](../components/rte/runs). Any setting can be overridden on the command line, after the
-`--config`:
+That run tunes GPT-2 on RTE in phases (finetuning-scheduler, on interpretune's core loop). Each run file opens with a
+comment saying what it runs, on what hardware, and its command line; read them in
+[`components/rte/runs/`](../components/rte/runs).
+
+GPT-2 is small enough for a CPU, but the run as shipped trains on all of RTE for up to ten epochs: minutes on a GPU,
+many hours on a CPU. Any setting can be overridden on the command line, after the `--config`, so for a quick look on a
+CPU, limit the epochs and batches:
 
 ```bash
-interpretune --run_command train --config hub://speediedan/rte/runs/rte_ft.gpt2.core.yaml --run_cfg.max_epochs 2
+interpretune --run_command train --config hub://speediedan/rte/runs/rte_ft.gpt2.core.yaml \
+  --run_cfg.max_epochs 3 --run_cfg.limit_train_batches 20 --run_cfg.limit_val_batches 5
 ```
 
 Runs write their checkpoints and logs under the current directory. The Lightning form of the same run is
@@ -134,6 +138,9 @@ Runs write their checkpoints and logs under the current directory. The Lightning
 ```bash
 interpretune --lightning_cli fit --config hub://speediedan/rte/runs/rte_ft.gpt2.lightning.yaml
 ```
+
+On Lightning the same limits are `--trainer.max_epochs`, `--trainer.limit_train_batches` and
+`--trainer.limit_val_batches`.
 
 ## 4. Run a tutorial notebook
 
@@ -172,7 +179,7 @@ The `rte` component's larger runs use the same commands as step 3 (pull the conf
 | --- | --- | --- |
 | `runs/rte_ft.gemma3.core.yaml` | phased fine-tuning of gemma-3-1b-it, core loop | one GPU |
 | `runs/rte_ft.gemma3.lightning.yaml` | the same on Lightning | one GPU |
-| `runs/rte_sparse.gemma3.core.yaml` | the sparsity chain: tuning with an attribution penalty, then recovery, each phase graphed and gated against a pinned reference | one GPU, with room for the model, a second copy and the transcoders |
+| `runs/rte_sparse.gemma3.core.yaml` | the sparsity chain: tuning with an attribution penalty, then recovery, each phase graphed and gated against a pinned reference | one 24 GB GPU (the model, a second copy and the transcoders); budget an hour or more |
 | `runs/rte_latent.gemma3_4b.core.fsdp2.yaml` | LoRA and spliced-transcoder tuning of gemma-3-4b-it, sharded with FSDP2 | two GPUs, under `torchrun` (the command is in the file) |
 
 ```bash

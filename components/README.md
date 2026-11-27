@@ -25,12 +25,17 @@ defines what other components compose); the catalog check refuses an entry witho
 | `op-collection-demo/` | [`speediedan/op-collection-demo`](https://huggingface.co/speediedan/op-collection-demo) | `005039b5fc37fa42f3deb800aa84dd7dadca531e` |
 | `knowing-using/` | [`speediedan/knowing-using`](https://huggingface.co/speediedan/knowing-using) | `dfa15ed754def79a190bc3771df3929d8f4a3448` |
 | `oracle-lens/` | [`speediedan/oracle-lens`](https://huggingface.co/speediedan/oracle-lens) | `5f510268db0871b266e95f8ba076f243654f37c1` |
+| `looped-lens/` | [`speediedan/looped-lens`](https://huggingface.co/speediedan/looped-lens) | `4ec9d869e34f25191f44fc5a9f37a4f2b1cab58c` |
 
 `knowing-using` and `oracle-lens` moved from interpretune's `src/it_examples/examples/` as well. `knowing-using` was
 republished from this repository (its published revision predated the moved `knowing_using.py`); `oracle-lens`'s
 published revision already matched the moved tree. Neither is in `catalog.yaml` yet: `knowing-using`'s CPU tests live
 in `tests/components/` rather than in its snapshot, and `oracle-lens`'s published tree does not ship its `tests/`, so
 neither has a smoke the scheduled run can execute from the snapshot.
+
+`looped-lens` moved from interpretune's `src/it_examples/examples/looped_lens/` too, and was published for the first
+time from this repository. It is not in `catalog.yaml` for the same reason as `oracle-lens`: its published tree does
+not ship its `tests/`.
 
 Both moved from interpretune's in-tree publish sources (`src/it_examples/examples/rte/` and
 `src/it_examples/examples/prompt_configs/`). `rte_boolq.py`, which until now existed only on the Hub, comes from the

@@ -155,7 +155,7 @@ jupyter lab tutorials/publish/quickstart/cpu_quickstart.ipynb
 Open notebooks from `tutorials/publish/`. The `tutorials/dev/` lane is the authored source that `tutorials/publish/` is
 generated from, and its imports name development paths.
 
-The [CPU quickstart](notebooks/quickstart/cpu_quickstart) is the one to run first: GPT-2 on a CPU, one analysis op over
+The [CPU quickstart](notebook_artifacts/quickstart/cpu_quickstart.ipynb) is the one to run first: GPT-2 on a CPU, one analysis op over
 RTE, the result in an `AnalysisStore`, with no token and no gated weights. To read a tutorial without running it, open
 its rendered page from [the gallery](gallery.md): each one is executed ahead of time and shown with its outputs.
 

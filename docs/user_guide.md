@@ -4,7 +4,7 @@ This guide takes you from nothing to a running example in four steps: install in
 Hugging Face Hub, run one of its configurations from the command line, and run a tutorial notebook from this
 repository. Every step runs on a CPU; the last section lists the runs that need a GPU.
 
-The examples are validated against the interpretune commit in [`interpretune.ref`](../interpretune.ref). Until
+The examples are validated against the interpretune commit in [`interpretune.ref`](https://github.com/interpretune/examples/blob/main/interpretune.ref). Until
 interpretune publishes a release that carries what the tutorials use, you install it from a clone.
 
 ## 1. Install interpretune
@@ -48,7 +48,7 @@ The path printed should be under your virtual environment's `site-packages` (or 
 ## 2. Pull a component
 
 A component is a Hugging Face Hub repository with an `it_component.yaml` manifest: configurations, schedules, run
-configurations, and the Python entrypoint its configurations name. The catalog ([`catalog.yaml`](../catalog.yaml))
+configurations, and the Python entrypoint its configurations name. The catalog ([`catalog.yaml`](https://github.com/interpretune/examples/blob/main/catalog.yaml))
 lists the tested ones, each with a pinned revision. This guide uses `speediedan/rte`, the RTE (SuperGLUE textual
 entailment) task.
 
@@ -69,7 +69,7 @@ loads read the same snapshot. Pass the catalog's revision when you want the test
 
 A key-less pull, as above, fetches the manifest, the entrypoint and the shipped files, and executes nothing. You can
 read the entrypoint module the manifest names (`manifest["module"]["entrypoint"]`) before you run any of it. The
-component's source is also in this repository, under [`components/rte/`](../components/rte).
+component's source is also in this repository, under [`components/rte/`](https://github.com/interpretune/examples/blob/main/components/rte).
 
 ### Opting in to the component's code
 
@@ -121,7 +121,7 @@ A run whose configuration is not cached stops before it starts and names the pul
 
 That run tunes GPT-2 on RTE in phases (finetuning-scheduler, on interpretune's core loop). Each run file opens with a
 comment saying what it runs, on what hardware, and its command line; read them in
-[`components/rte/runs/`](../components/rte/runs).
+[`components/rte/runs/`](https://github.com/interpretune/examples/blob/main/components/rte/runs).
 
 The GPT-2 configurations run on the CPU (their model loads with `device_map: cpu`). As shipped, the run trains on all of
 RTE until the schedule's last phase plateaus, at most ten epochs: about 90 minutes on a desktop CPU. Any setting can be
@@ -155,7 +155,7 @@ jupyter lab tutorials/publish/quickstart/cpu_quickstart.ipynb
 Open notebooks from `tutorials/publish/`. The `tutorials/dev/` lane is the authored source that `tutorials/publish/` is
 generated from, and its imports name development paths.
 
-The [CPU quickstart](notebook_artifacts/quickstart/cpu_quickstart.ipynb) is the one to run first: GPT-2 on a CPU, one analysis op over
+The [CPU quickstart](https://interpretune.org/projects/examples/en/latest/notebooks/quickstart/cpu_quickstart.html) is the one to run first: GPT-2 on a CPU, one analysis op over
 RTE, the result in an `AnalysisStore`, with no token and no gated weights. To read a tutorial without running it, open
 its rendered page from [the gallery](gallery.md): each one is executed ahead of time and shown with its outputs.
 

@@ -1,0 +1,33 @@
+/* Landing page: the wordmark logo replaces the visible H1 text; keep the heading accessible. */
+section#interpretune > h1 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Full-width layout, as finetuning-scheduler's docs do: pydata-sphinx-theme centres an 88rem page and caps the article
+   at 60em, which leaves most of a wide window empty beside the sidebars. Pin both sidebars at fixed widths and let the
+   article take the rest, so wide code cells and tables use the room the viewport has. */
+.bd-page-width {
+  max-width: none;
+}
+.bd-main .bd-content .bd-article-container {
+  max-width: none;
+}
+@media (min-width: 960px) {
+  .bd-sidebar-primary {
+    flex: 0 0 20rem;
+    width: 20rem;
+    max-width: 20rem;
+  }
+}
+@media (min-width: 1200px) {
+  .bd-sidebar-secondary {
+    flex: 0 0 17rem;
+    width: 17rem;
+    max-width: 17rem;
+  }
+}

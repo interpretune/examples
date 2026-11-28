@@ -1,0 +1,9 @@
+# Documentation build requirements (Read the Docs and the docs job in .github/workflows/ci.yml). The tutorials are never
+# executed when the docs build, so neither interpretune nor any adapter is installed: only Sphinx and the renderer.
+sphinx>=8.1,<9.0
+pydata-sphinx-theme>=0.16.1
+myst-nb>=1.2.0  # renders the tutorials; execution stays off (nb_execution_mode)
+linkify-it-py>=2.0
+sphinx-copybutton>=0.5
+# conf.py strips the docs-excluded cells with nbpress's renderer: the commit interpretune pins at interpretune.ref.
+nbpress @ git+https://github.com/speediedan/nbpress@b4a62204ac84578baaa1d7373d39f2d8a9090de5

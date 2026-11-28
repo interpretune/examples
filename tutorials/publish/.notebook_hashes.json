@@ -73,7 +73,7 @@
   "tutorials/dev/example_op_collections/local_op_collection/local_op_definitions.py": "e7a21b8151f745ed60fabf992f9742eae30a4a4b9c98d1ced6a5d47a0461d450",
   "tutorials/dev/example_op_collections/op_collection_demo_utils.py": "a7a739e9457dade95ee0e4480e3ac855db352127de816c04032dc26f658f65ec",
   "tutorials/dev/example_op_collections/op_collection_example.ipynb": "da7cd012b40e5450e9f4b4c5f570cb8ad5a6c953c1696b462f2071d8289e14c3",
-  "tutorials/dev/gradient_readouts/gradient_readouts.ipynb": "a8ef04aa432577f67e72c0bdf05a308bab3935cdd05ef5e0f5ffd4bc28163094",
+  "tutorials/dev/gradient_readouts/gradient_readouts.ipynb": "df2739f3050a358ba46ef7c6f573ac8ab6a0c34af0a64b72b10f9a2ab4ce05ea",
   "tutorials/dev/interp_engine_example/interp_engine_hub_adapter.ipynb": "153e3545be1c2aa2f68a1ad02105d5770ea49eb1585fc0dd60c2c95b06e8631e",
   "tutorials/dev/neuron_communities/neuron_communities_replication.ipynb": "9c9f290477097018ded417b8cb8bf7322ad185f53206bcb1b5088461524ebafd",
   "tutorials/dev/neuron_finder/neuron_finder.ipynb": "d8f95f30f13dee09a4b06c4487d0b784f8cbe6fe308d4ec11c1ab105183f55e4",

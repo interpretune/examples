@@ -11,7 +11,7 @@ built.
 ```
 
 Several examples need optional adapters (TransformerLens, NNsight, SAELens, circuit-tracer), a GPU,
-and in some cases gated model weights. See {doc}`usage/developer_multi_repo_setup` for environment
+and in some cases gated model weights. See {external+interpretune:doc}`usage/developer_multi_repo_setup` for environment
 setup.
 
 ## What each notebook needs
@@ -26,7 +26,7 @@ uv pip install -e ".[examples,tune]" --group git-deps  # + the three tuning note
 uv pip install -e ".[examples]" --group git-deps   # everything else
 ```
 
-These commands run from a checkout of [interpretune](https://github.com/speediedan/interpretune), which defines the
+These commands run from a checkout of [interpretune](https://github.com/interpretune/interpretune), which defines the
 extras and the `git-deps` group.
 
 | Notebook | Install | GPU | Model access |

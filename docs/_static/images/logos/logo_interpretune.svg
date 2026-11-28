@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 548 96" width="548" height="96" role="img" aria-label="Interpretune">
+  <defs>
+    <linearGradient id="wmMetal" x1="4" y1="24" x2="40" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#eef4f1"/>
+      <stop offset="40%" stop-color="#aebbb5"/>
+      <stop offset="65%" stop-color="#84988f"/>
+      <stop offset="100%" stop-color="#cfd9d5"/>
+    </linearGradient>
+    <linearGradient id="wmGreen" x1="0" y1="10" x2="0" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2eaf6c"/>
+      <stop offset="100%" stop-color="#135f3c"/>
+    </linearGradient>
+  </defs>
+  <!-- "Interpret" — textLength pins the advance width so the gap before the fork (fixed at
+       x=243) is identical under every platform fallback font (Android Roboto renders ~10px
+       narrower than desktop Arial/Inter, which read as "Interpret Une") -->
+  <text x="8" y="66" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="56"
+        font-weight="650" letter-spacing="0.5" fill="url(#wmGreen)"
+        textLength="232" lengthAdjust="spacingAndGlyphs">Interpret</text>
+  <!-- metallic tuning fork with handle standing in for the 'u', tilted 10 degrees; gradient is
+       userSpaceOnUse (objectBoundingBox is degenerate on vertical strokes = invisible handle) -->
+  <g transform="translate(243,0) rotate(10 20 52)">
+    <g stroke="url(#wmMetal)" stroke-width="7" stroke-linecap="round" fill="none">
+      <!-- prongs joined in a U (x-height) -->
+      <path d="M8 27 V48 a12 12 0 0 0 24 0 V27"/>
+      <!-- stem (fork handle shaft) -->
+      <path d="M20 62 V74"/>
+    </g>
+    <!-- handle knob -->
+    <circle cx="20" cy="79" r="5" fill="url(#wmMetal)"/>
+    <!-- highlight -->
+    <path d="M8 28 V47" stroke="#ffffff" stroke-opacity="0.5" stroke-width="2" fill="none"/>
+  </g>
+  <!-- "ne" -->
+  <text x="286" y="66" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="56"
+        font-weight="650" letter-spacing="0.5" fill="url(#wmGreen)"
+        textLength="66" lengthAdjust="spacingAndGlyphs">ne</text>
+</svg>
